@@ -1,17 +1,17 @@
 /**
  * oh-my-omp — port of oh-my-openagent (OMO) to oh-my-pi (OMP).
  *
- * Iteration 1 responsibilities:
+ * Responsibilities:
  *   - Advertise the bundled skills directory via `resources_discover`.
- *   - Register the loop runtime (ralph / ulw) and hook it to `agent_end`.
- *   - Provide the loop control commands (`/ralph-loop`, `/ulw-loop`,
+ *   - Register the loop runtime (ralph / ulw) and hook it to `agent_end`,
+ *     plus the loop control commands (`/ralph-loop`, `/ulw-loop`,
  *     `/cancel-ralph`, `/stop-continuation`).
+ *   - Register the lifecycle hooks: `todo-enforcer` (session_stop
+ *     continuation), `comment-checker` (tool_result on edit/write),
+ *     `intent-gate` (before_agent_start directive).
  *   - Markdown slash commands (/ulw, /ultrawork, /init-deep, /refactor,
- *     /handoff, /start-work, /remove-ai-slops, /omomomo) ship as plain
- *     `.md` drops alongside this extension; nothing for the runtime to do.
- *
- * Hooks (`todo-enforcer`, `comment-checker`, `intent-gate`) and the rest
- * of the agent / skill bodies land in iterations 2-4. See README.md.
+ *     /handoff, /start-work, /remove-ai-slops, /omomomo), agents, and
+ *     skills ship as plain files discovered by OMP; nothing to wire here.
  */
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,10 +19,13 @@ import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 
 import { LoopRuntime } from "./loop/runtime";
 import { registerLoopCommands } from "./loop/commands";
+import { registerTodoEnforcer } from "./hooks/todo-enforcer";
+import { registerCommentChecker } from "./hooks/comment-checker";
+import { registerIntentGate } from "./hooks/intent-gate";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SKILLS_DIR = path.resolve(HERE, "../../skills");
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
 
 export default async function (pi: ExtensionAPI): Promise<void> {
 	// Advertise our bundled skill bundle. OMP normally only scans
@@ -45,4 +48,9 @@ export default async function (pi: ExtensionAPI): Promise<void> {
 	pi.on("agent_end", (event, ctx) => runtime.onAgentEnd(event, ctx));
 
 	registerLoopCommands(pi, runtime);
+
+	// Lifecycle hooks (discipline enforcement).
+	registerTodoEnforcer(pi);
+	registerCommentChecker(pi);
+	registerIntentGate(pi);
 }
