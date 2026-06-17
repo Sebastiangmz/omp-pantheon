@@ -37,7 +37,11 @@ export function registerIntentGate(pi: ExtensionAPI): void {
 	pi.on("session_switch", reset);
 	pi.on("session_branch", reset);
 
-	pi.on("before_agent_start", () => {
+	pi.on("before_agent_start", (_event, ctx) => {
+		// Main interactive session only. Subagents (explore/oracle/task/…) load
+		// this extension too and run headless (hasUI=false); they have a specific
+		// assignment and must not receive the user-intent routing directive.
+		if (!ctx.hasUI) return;
 		if (injectedThisSession) return;
 		injectedThisSession = true;
 

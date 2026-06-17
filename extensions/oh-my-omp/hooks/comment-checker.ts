@@ -121,6 +121,21 @@ function filePathOf(input: unknown): string | undefined {
 
 // ── Registration ────────────────────────────────────────────────────────
 
+/**
+ * Prose/data/markup files where `#`, `*`, `--`, `<!--` are NOT code comments
+ * (markdown headings/bullets, etc.) — scanning them produces false positives.
+ */
+const SKIP_EXTENSIONS: Record<string, true> = {
+	md: true, mdx: true, markdown: true, txt: true, rst: true, adoc: true,
+	json: true, jsonc: true, csv: true, tsv: true, lock: true, svg: true,
+	html: true, htm: true, xml: true, yaml: true, yml: true, toml: true,
+};
+
+function isNonCodeFile(filePath: string): boolean {
+	const ext = filePath.split(".").pop()?.toLowerCase();
+	return ext ? SKIP_EXTENSIONS[ext] === true : false;
+}
+
 export function registerCommentChecker(pi: ExtensionAPI): void {
 	// Dynamic per-file dedup → Map (runtime keys, not a static table).
 	const lastWarnedByFile = new Map<string, number>();
@@ -128,7 +143,8 @@ export function registerCommentChecker(pi: ExtensionAPI): void {
 	pi.on("tool_result", (event) => {
 		if (!CHECKED_TOOLS[event.toolName] || event.isError) return;
 
-		const filePath = filePathOf(event.input) ?? "(unknown file)";
+		const filePath = filePathOf(event.input);
+		if (!filePath || isNonCodeFile(filePath)) return;
 		const now = Date.now();
 		const last = lastWarnedByFile.get(filePath) ?? 0;
 		if (now - last < DEDUP_WINDOW_MS) return;
