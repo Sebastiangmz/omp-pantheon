@@ -1,6 +1,6 @@
 ---
 name: playwright-cli
-description: MUST USE for any browser-related tasks via the playwright CLI — verification, browsing, information gathering, web scraping, testing, screenshots, and all browser interactions from the shell.
+description: Shell-driven browser automation from bash — the `agent-browser` CLI (open/snapshot/state, `@e` refs) and the `npx playwright test` runner. Use for CI runs, headless screenshots, and test-suite execution. For in-session browsing prefer `dev-browser`.
 ---
 
 # Browser Automation via CLI

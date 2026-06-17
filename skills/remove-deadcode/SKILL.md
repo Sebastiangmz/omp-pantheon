@@ -11,6 +11,11 @@ Dead code removal via massively parallel `task` subagents. You are the ORCHESTRA
 - **You do NOT remove code yourself.** You scan, verify, batch, then fire `task` subagents. They do the work.
 </rules>
 
+## Hard Preconditions
+
+1. You are in the **main session**, not a background subagent. Phase 4 fans out 5–10 parallel `task` subagents; a parent `task` agent MUST NOT load this skill (it would recurse and trip OMP's 16-concurrent-subagent cap).
+2. Before dispatching a batch, check live peer count with `irc` (op:"list") and keep total concurrent subagents ≤ 10 to leave headroom.
+
 <false-positive-guards>
 NEVER mark as dead:
 - Symbols in `src/index.ts` or barrel `index.ts` re-exports
@@ -29,11 +34,14 @@ Run ALL of these in parallel:
 
 <parallel-scan>
 
-**TypeScript strict mode (your primary scanner — run this FIRST):**
+**Static unused-symbol scan (run this FIRST):** detect the project toolchain and run its unused-symbol checker, e.g.:
 ```bash
-bunx tsc --noEmit --noUnusedLocals --noUnusedParameters 2>&1
+# TypeScript (tsconfig.json / package.json): bunx tsc --noEmit --noUnusedLocals --noUnusedParameters
+# Python (pyproject.toml):                   ruff check --select F401,F811,F841 .
+# Go (go.mod):                               go vet ./... ; staticcheck ./...
+# Rust (Cargo.toml):                         cargo check 2>&1 (dead_code warnings)
 ```
-This gives you the definitive list of unused locals, imports, parameters, and types with exact file:line locations.
+Pick the command matching the project's manifest. This yields the definitive list of unused locals, imports, parameters, and types with exact file:line locations. If the toolchain is unknown, fall back to `search`/`ast_grep` + `lsp(action: "references")` per symbol.
 
 **Explore agents (fire ALL simultaneously via one `task()` call):**
 
@@ -101,7 +109,7 @@ If ZERO confirmed: report "No dead code found" and STOP.
 1. Group confirmed dead code items by FILE PATH
 2. All items in the SAME file go to the SAME batch (prevents two agents editing the same file)
 3. If a dead FILE (entire file deletion) exists, it's its own batch
-4. Target 5-15 batches. If fewer than 5 items total, use 1 batch per item.
+4. Target 5-10 batches (stay within OMP's 16-subagent cap with headroom). If fewer than 5 items total, use 1 batch per item.
 
 **Example batching:**
 ```
@@ -120,6 +128,8 @@ Files in the same directory CAN be batched together (they won't conflict as long
 ## PHASE 4: EXECUTE — Fire Parallel Task Subagents
 
 Fire ALL batches simultaneously in a single `task()` call:
+> Use the project's typecheck command in the agent context and verification below. The example uses `bunx tsc --noEmit` (TS/Bun); for other toolchains substitute the command detected in the scan phase.
+
 
 ```
 task(
@@ -152,9 +162,11 @@ Wait for all batch agents to complete.
 After ALL agents complete:
 
 ```bash
-bunx tsc --noEmit    # must pass
-bun test             # note any NEW failures vs pre-existing
-bun run build        # must pass
+# Run the project's own typecheck / test / build (detected in the scan phase). Examples:
+#   TS:   bunx tsc --noEmit && bun test && bun run build
+#   Py:   ruff check . && pytest -q
+#   Go:   go vet ./... && go test ./... && go build ./...
+#   Rust: cargo check && cargo test && cargo build
 ```
 
 Produce summary:

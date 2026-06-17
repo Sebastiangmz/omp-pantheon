@@ -5,7 +5,7 @@ description: "Parallel security research skill. Orchestrates 3 vulnerability hun
 
 # Security Research — Parallel Vulnerability Audit
 
-Use this skill to run a parallel security audit that separates real exploitability from generic concern. The team has 3 vulnerability hunters and 2 PoC engineers, all fired as parallel `task` subagents.
+Use this skill to run a parallel security audit that separates real exploitability from generic concern. The team is 5 members — 3 vulnerability hunters and 2 PoC engineers — run as `task` subagents across three coordinated waves (Phase 1: hunters in parallel; Phase 2: PoC engineers in parallel; Phase 3: a 5-wide cross-check).
 
 ## Hard Preconditions
 

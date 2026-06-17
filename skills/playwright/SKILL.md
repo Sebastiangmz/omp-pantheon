@@ -1,6 +1,6 @@
 ---
 name: playwright
-description: MUST USE for any browser-related tasks. Browser automation via Playwright MCP — verification, browsing, information gathering, web scraping, testing, screenshots, and all browser interactions.
+description: Browser automation via the in-process Playwright/MCP-style API (the `browser` tool's `tab.*`/`page.*` helpers). Use for scripted in-session browsing, scraping, and UI testing. For general browser work prefer `dev-browser`; for shell/`npx playwright test` runs use `playwright-cli`.
 ---
 
 # Browser Automation with Playwright

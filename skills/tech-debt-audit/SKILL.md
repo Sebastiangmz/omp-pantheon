@@ -7,6 +7,11 @@ description: "Thorough, file-cited technical debt audit across 9 dimensions usin
 
 Technical debt audit using OMP tools (`search`, `find`, `bash`, `read`, `lsp`, `ast_grep`, `task`). Produces a grounded, citable `TECH_DEBT_AUDIT.md` artifact.
 
+## Hard Preconditions
+
+1. You are in the **main session**, not a background subagent — Phase 2 fans out parallel `task` subagents, which must not recurse. A parent `task` agent MUST NOT load this skill.
+2. You have a concrete target (repo, path list, or subtree). Absent one, audit the current working tree.
+
 > **Note:** The upstream skill supported optional [CodeGraph](https://github.com/colbymchenry/codegraph) MCP integration for enhanced code-graph analysis (symbol search, call graph, impact analysis, framework-aware routes). Those CodeGraph-specific sections (under Phase 0, dimensions 1, 5, and 7) are omitted from this port as CodeGraph MCP is not bundled. If CodeGraph is available in your environment, its `codegraph_search`, `codegraph_callers`, `codegraph_callees`, `codegraph_impact`, and `codegraph_explore` tools can augment the standard scans in those dimensions.
 
 ---
@@ -38,7 +43,7 @@ Use OMP tools for each dimension. Run parallel tool calls within each dimension.
 
 ### 1. Architectural Decay
 
-- `bash("sg -p \"import { $$$ } from '$SRC'\" -l ts .")` — map module graph, look for circular patterns
+- `ast_grep(pat: "import { $$$ } from '$SRC'", paths: ["src/"])` — map module graph, look for circular patterns
 - `ast_grep(pat: "class $NAME { $$$ }", paths: ["src/"])` — check for god classes
 - `search(pattern: "TODO|FIXME|HACK|XXX|WORKAROUND|TEMP")` — tagged debt markers
 - `search(pattern: "async|await")` on sync-looking files — misplaced async boundaries

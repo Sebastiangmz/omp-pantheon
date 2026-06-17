@@ -203,14 +203,11 @@ Based on codemap:
 ## 3.1: Detect Test Infrastructure
 
 ```bash
-# Check for test commands
-cat package.json | jq '.scripts | keys[] | select(test("test"))'
-
-# Or for Python
-ls -la pytest.ini pyproject.toml setup.cfg
-
-# Or for Go
-ls -la *_test.go
+# JS/TS: read the manifest and inspect `scripts` (use the read tool, not cat)
+#   read("package.json")  → look at .scripts for a "test" entry
+# Python: find . -maxdepth 2 \( -name pytest.ini -o -name pyproject.toml -o -name setup.cfg \)
+# Go:     find . -name '*_test.go'
+jq '.scripts | keys[] | select(test("test"))' package.json   # if package.json exists
 ```
 
 ## 3.2: Analyze Test Coverage
