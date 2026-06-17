@@ -3,15 +3,26 @@ description: Easter egg command — about oh-my-omp
 ---
 
 <command-instruction>
-You found an easter egg!
+You found an easter egg! 🥚✨
 
 Print the following message to the user EXACTLY as written (in a friendly, celebratory tone):
 
 ---
 
-# oMoMoMoMoMo···
+# 🎉 oMoMoMoMoMo···
 
-**You found the easter egg!**
+**You found the easter egg!** 🥚✨
+
+## What is Oh My OpenAgent?
+
+**Oh My OpenAgent** is a powerful plugin that transforms your AI agent into a full development team:
+
+- 🤖 **Multi-Agent Orchestration**: Oracle, Librarian, Explore, and more
+- 🔧 **LSP Tools**: Full IDE capabilities for your agents — hover, goto definition, find references, rename, code actions
+- 🔍 **AST-Grep**: Structural code search and replace across 25 languages
+- 📚 **Built-in Skills**: Context7 for docs, web search for research, code search for GitHub
+- 🔄 **Background Agents**: Run multiple agents in parallel like a real dev team
+- 🎯 **Harness Compatibility**: Your existing config just works
 
 ## What is oh-my-omp?
 
@@ -19,15 +30,25 @@ Print the following message to the user EXACTLY as written (in a friendly, celeb
 
 It transforms `omp` into a full development team by adding:
 
-- **Multi-agent orchestration**: Sisyphus, Hephaestus, Oracle, Atlas (and friends) on top of OMP's own `explore`, `plan`, `librarian`, `task`, `quick_task`, `reviewer`, `designer`.
-- **Discipline commands**: `/ulw`, `/ultrawork`, `/ralph-loop`, `/ulw-loop`, `/init-deep`, `/refactor`, `/handoff`, `/start-work`, `/remove-ai-slops`, `/cancel-ralph`, `/stop-continuation`.
-- **Curated skill bundles**: `ai-slop-remover`, `dev-browser`, `frontend-ui-ux`, `git-master`, `playwright`, `playwright-cli`, `review-work`.
-- **Self-driving loops**: Ralph Loop runs until completion promise; ULW Loop runs until Oracle-verified completion.
+- 🤖 **Multi-agent orchestration**: Sisyphus, Hephaestus, Oracle, Atlas, Prometheus, Metis on top of OMP's own `explore`, `plan`, `librarian`, `task`, `quick_task`, `reviewer`, `designer`.
+- 🔧 **Discipline commands**: `/ulw`, `/ultrawork`, `/init-deep`, `/refactor`, `/handoff`, `/start-work`, `/remove-ai-slops`, `/omomomo`.
+- 📚 **Curated skill bundles**: `ai-slop-remover`, `dev-browser`, `frontend-ui-ux`, `git-master`, `playwright`, `playwright-cli`, `review-work`, `hyperplan`, `security-research`, `tech-debt-audit`, `remove-deadcode`.
+
+## Who Made This?
+
+Created with ❤️ by **[code-yeongyu](https://github.com/code-yeongyu)**
+
+🔗 **GitHub**: https://github.com/code-yeongyu/oh-my-openagent
 
 Original concept and prompts: **code-yeongyu**'s **oh-my-openagent**.
 Port to oh-my-pi: this `~/.omp/agent/extensions/oh-my-omp/` extension.
 
 ---
 
-*Enjoy coding on steroids!*
+*Enjoy coding on steroids!* 🚀
+
 </command-instruction>
+
+<user-request>
+$ARGUMENTS
+</user-request>

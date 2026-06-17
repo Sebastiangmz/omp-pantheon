@@ -62,7 +62,22 @@ Before proceeding, confirm:
 - [ ] Scope is defined (file/module/project)
 - [ ] Success criteria can be articulated
 
-**If ANY of above is unclear, ASK CLARIFYING QUESTION** with options A/B/C and your recommendation.
+**If ANY of above is unclear, ASK CLARIFYING QUESTION:**
+
+```
+I want to make sure I understand the refactoring goal correctly.
+
+**What I understood**: [interpretation]
+**What I'm unsure about**: [specific ambiguity]
+
+Options I see:
+1. [Option A] - [implications]
+2. [Option B] - [implications]
+
+**My recommendation**: [suggestion with reasoning]
+
+Should I proceed with [recommendation], or would you prefer differently?
+```
 
 ## Step 0.3: Create Initial Todos
 
@@ -82,7 +97,7 @@ Use the todo tool to register six phases:
 
 ## 1.1: Launch Parallel Explore Agents
 
-Fire ALL of these simultaneously via `task(agent: "explore", tasks: [...])`:
+Fire ALL of these simultaneously via a single `task` call:
 
 ```
 task(agent: "explore", tasks: [
@@ -98,20 +113,32 @@ task(agent: "explore", tasks: [
 
 While background agents are running, use `lsp` directly:
 
-- `lsp(action: "definition", file, line, symbol)` — where is it defined?
-- `lsp(action: "references", file, line, symbol)` — find ALL usages
-- `lsp(action: "symbols", file)` — file structure
-- `lsp(action: "symbols", file: "*", query)` — search by name
-- `lsp(action: "diagnostics", file)` — current errors/warnings (baseline)
+### LSP Tools for Precise Analysis:
 
-### AST-Grep for Pattern Analysis
+```
+lsp(action: "definition", file, line, symbol)   // Where is it defined?
+lsp(action: "references", file, line, symbol)    // Find ALL usages across workspace
+lsp(action: "symbols", file)                     // Hierarchical file outline
+lsp(action: "symbols", file: "*", query: "...")  // Search by name
+lsp(action: "diagnostics", file)                 // Errors, warnings before we start
+```
 
-- `ast_grep(pat: "function $NAME($$$) { $$$ }", path: "src/")` — find structural patterns
-- For replace: use `ast_edit({ ops: [{ pat, out }], path })` after pattern verified
+### AST-Grep for Pattern Analysis:
 
-### Grep for Text Patterns
+```
+ast_grep(pat: "function $NAME($$$) { $$$ }", paths: ["src/"])
 
-- `grep(pattern: "[search_term]", path: "src/")` — text search
+// Preview refactoring first
+ast_grep(pat: "[old_pattern]", paths: ["src/"])
+// Then apply via:
+ast_edit(ops: [{ pat: "[old_pattern]", out: "[new_pattern]" }], paths: ["src/"])
+```
+
+### Search for Text Patterns:
+
+```
+search(pattern: "[search_term]", paths: ["src/"])
+```
 
 **Mark phase-1 as completed after all agents return.**
 
@@ -122,6 +149,8 @@ While background agents are running, use `lsp` directly:
 **Mark phase-2 as in_progress.**
 
 ## 2.1: Construct Definitive Codemap
+
+Based on Phase 1 results, build:
 
 ```
 ## CODEMAP: [TARGET]
@@ -157,6 +186,7 @@ While background agents are running, use `lsp` directly:
 
 ## 2.2: Identify Refactoring Constraints
 
+Based on codemap:
 - **MUST follow**: [existing patterns identified]
 - **MUST NOT break**: [critical dependencies]
 - **Safe to change**: [isolated code zones]
@@ -173,24 +203,26 @@ While background agents are running, use `lsp` directly:
 ## 3.1: Detect Test Infrastructure
 
 ```bash
-# Check for test commands
-cat package.json | jq '.scripts | keys[] | select(test("test"))'
-# Or for Python
-ls -la pytest.ini pyproject.toml setup.cfg
-# Or for Go
-ls -la *_test.go
+# JS/TS: read the manifest and inspect `scripts` (use the read tool, not cat)
+#   read("package.json")  → look at .scripts for a "test" entry
+# Python: find . -maxdepth 2 \( -name pytest.ini -o -name pyproject.toml -o -name setup.cfg \)
+# Go:     find . -name '*_test.go'
+jq '.scripts | keys[] | select(test("test"))' package.json   # if package.json exists
 ```
 
 ## 3.2: Analyze Test Coverage
 
-Spawn one synchronous explore task asking specifically:
-1. Which test files cover this code?
-2. What test cases exist?
-3. Are there integration tests?
-4. What edge cases are tested?
-5. Estimated coverage percentage?
+```
+task(agent: "explore", tasks: [{
+  id: "test-coverage",
+  description: "Analyze test coverage for target",
+  assignment: "Analyze test coverage for [TARGET]: 1. Which test files cover this code? 2. What test cases exist? 3. Are there integration tests? 4. What edge cases are tested? 5. Estimated coverage percentage?"
+}])
+```
 
 ## 3.3: Determine Verification Strategy
+
+Based on test analysis:
 
 | Coverage Level | Strategy |
 |----------------|----------|
@@ -199,11 +231,42 @@ Spawn one synchronous explore task asking specifically:
 | LOW (<50%) | **PAUSE**: Propose adding tests first |
 | NONE | **BLOCK**: Refuse aggressive refactoring |
 
-**If coverage is LOW or NONE, ask user** for explicit choice between (1) tests-first, (2) extra-cautious manual verification, (3) abort.
+**If coverage is LOW or NONE, ask user:**
+
+```
+Test coverage for [TARGET] is [LEVEL].
+
+**Risk Assessment**: Refactoring without adequate tests is dangerous.
+
+Options:
+1. Add tests first, then refactor (RECOMMENDED)
+2. Proceed with extra caution, manual verification required
+3. Abort refactoring
+
+Which approach do you prefer?
+```
 
 ## 3.4: Document Verification Plan
 
-Capture: test commands, type-check command, regression indicators, behaviour invariants.
+```
+## VERIFICATION PLAN
+
+### Test Commands
+- Unit: `bun test` / `npm test` / `pytest` / etc.
+- Integration: [command if exists]
+- Type check: `tsc --noEmit` / `pyright` / etc.
+
+### Verification Checkpoints
+After each refactoring step:
+1. lsp(action: "diagnostics") → zero new errors
+2. Run test command → all pass
+3. Type check → clean
+
+### Regression Indicators
+- [Specific test that must pass]
+- [Behavior that must be preserved]
+- [API contract that must not change]
+```
 
 **Mark phase-3 as completed.**
 
@@ -226,6 +289,7 @@ task(agent: "plan", tasks: [{
 ## 4.2: Review and Validate Plan
 
 After receiving plan from `plan` agent:
+
 1. **Verify completeness**: All identified files addressed?
 2. **Verify safety**: Each step reversible?
 3. **Verify order**: Dependencies respected?
@@ -253,23 +317,43 @@ For EACH refactoring step:
 3. Verify `lsp(action: "diagnostics")` baseline
 
 ### Execute Step
+Use appropriate tool:
 
-**For Symbol Renames**: `lsp(action: "rename", file, line, symbol, new_name)` — atomic across the workspace.
+**For Symbol Renames:**
+```
+lsp(action: "rename", file, line, symbol, new_name)
+```
 
-**For Pattern Transformations**: `ast_edit({ ops: [{ pat, out }], path })` after verifying pattern with `ast_grep`.
+**For Pattern Transformations:**
+```
+// Preview first
+ast_grep(pat: "[pattern]", paths: ["path/to/file.ts"])
 
-**For Structural Changes**: `edit({ path, edits })` for precise line-anchored edits.
+// If preview looks good, execute
+ast_edit(ops: [{ pat: "[pattern]", out: "[rewrite]" }], paths: ["path/to/file.ts"])
+```
+
+**For Structural Changes:**
+```
+edit(path, edits)
+```
 
 ### Post-Step Verification (MANDATORY)
 
-1. `lsp(action: "diagnostics", file)` → must be clean or same as baseline
-2. Run test command via `bash`
-3. Run type-check via `bash`
+```
+// 1. Check diagnostics
+lsp(action: "diagnostics", file)  // Must be clean or same as baseline
+
+// 2. Run tests
+bash("bun test")  // Or appropriate test command
+
+// 3. Type check
+bash("tsc --noEmit")  // Or appropriate type check
+```
 
 ### Step Completion
-
-- Verification passes → Mark step todo as `completed`
-- Verification fails → **STOP AND FIX**
+1. If verification passes → Mark step todo as `completed`
+2. If verification fails → **STOP AND FIX**
 
 ## 5.2: Failure Recovery Protocol
 
@@ -301,15 +385,82 @@ git commit -m "refactor(scope): description
 
 ---
 
+# PHASE 5 (Parallel Variant): Parallel Task Execution
+
+When the plan identifies 3+ file-independent refactoring steps, use parallel `task` agents instead of sequential execution:
+
+## 5.1-P: Parallel Dispatch
+
+Classify each plan step:
+- **Mechanical** (LSP rename, extract variable, inline, simple move, signature change) → assign to `quick_task`
+- **Reasoning-required** (extract function, restructure conditional, pattern transformation, cross-file API change) → assign to `task`
+
+```
+task(agent: "task", tasks: [
+  { id: "refactor-step-1", description: "Step 1: [short]", assignment: "<per-step instructions from plan, including target files and line ranges, rollback strategy>" },
+  { id: "refactor-step-2", description: "Step 2: [short]", assignment: "..." },
+  { id: "refactor-step-3", description: "Step 3: [short]", assignment: "..." }
+])
+```
+
+## 5.2-P: Verification After Each Completion
+
+On each agent completion, dispatch an `oracle` for verification:
+
+```
+task(agent: "oracle", tasks: [{
+  id: "verify-step-N",
+  description: "Verify refactoring step N",
+  assignment: "<files touched + test/typecheck/lint commands + instruction to return PASS or FAIL with specific error + suggested revert hunks>"
+}])
+```
+
+- On PASS: proceed, commit the checkpoint for that step.
+- On FAIL after 3 cycles on the same step: STOP and consult the user with full evidence.
+
+Proceed to Phase 6 only when every step is completed AND every paired verifier returned PASS.
+
+---
+
 # PHASE 6: FINAL VERIFICATION (REGRESSION CHECK)
 
 **Mark phase-6 as in_progress.**
 
-1. Full test suite (`bun test` / `npm test` / `pytest` / etc.)
-2. Type check (`tsc --noEmit` / equivalent)
-3. Lint (`eslint .` / equivalent)
-4. Build verification if applicable
-5. Final `lsp diagnostics` on all changed files
+## 6.1: Full Test Suite
+
+```bash
+# Run complete test suite
+bun test  # or npm test, pytest, go test, etc.
+```
+
+## 6.2: Type Check
+
+```bash
+# Full type check
+tsc --noEmit  # or equivalent
+```
+
+## 6.3: Lint Check
+
+```bash
+# Run linter
+eslint .  # or equivalent
+```
+
+## 6.4: Build Verification (if applicable)
+
+```bash
+# Ensure build still works
+bun run build  # or npm run build, etc.
+```
+
+## 6.5: Final Diagnostics
+
+```
+// Check all changed files
+for each changedFile:
+  lsp(action: "diagnostics", file: changedFile)  // Must all be clean
+```
 
 ## 6.6: Generate Summary
 
@@ -333,6 +484,8 @@ git commit -m "refactor(scope): description
 All existing tests pass. No new errors introduced.
 ```
 
+If the parallel variant (Phase 5-P) was used, append dispatch metrics (tasks created, verifier runs, total time).
+
 **Mark phase-6 as completed.**
 
 ---
@@ -340,7 +493,7 @@ All existing tests pass. No new errors introduced.
 # CRITICAL RULES
 
 ## NEVER DO
-- Skip `lsp diagnostics` check after changes
+- Skip `lsp(action: "diagnostics")` check after changes
 - Proceed with failing tests
 - Make changes without understanding impact
 - Use `as any`, `@ts-ignore`, `@ts-expect-error`
@@ -350,7 +503,7 @@ All existing tests pass. No new errors introduced.
 
 ## ALWAYS DO
 - Understand before changing
-- Preview before applying (`ast_grep` then `ast_edit`)
+- Preview structural rewrites before applying them (`ast_grep` then `ast_edit`)
 - Verify after every change
 - Follow existing codebase patterns
 - Keep todos updated in real-time
@@ -369,20 +522,24 @@ If any of these occur, **STOP and consult user**:
 
 # Tool Usage Philosophy
 
+You already know these tools. Use them intelligently:
+
 ## LSP
+Leverage LSP tools for precision analysis. Key patterns:
 - **Understand before changing**: `lsp(action: "definition")` to grasp context
-- **Impact analysis**: `lsp(action: "references")` to map all usages
+- **Impact analysis**: `lsp(action: "references")` to map all usages before modification
 - **Safe refactoring**: `lsp(action: "rename")` for symbol renames
 - **Continuous verification**: `lsp(action: "diagnostics")` after every change
 
 ## AST-Grep
-Use `ast_grep` for discovery and `ast_edit` for codemods. Always verify the pattern matches what you expect before applying.
+Use `ast_grep` for discovery and `ast_edit` for codemods.
+**Critical**: Always preview first, review, then execute.
 
 ## Agents
 - `explore`: Parallel codebase pattern discovery
 - `plan`: Detailed refactoring plan generation
 - `oracle`: Read-only consultation for complex architectural decisions and debugging
-- `librarian`: **Use proactively** when encountering deprecated methods or library migration tasks
+- `librarian`: **Use proactively** when encountering deprecated methods or library migration tasks. Query official docs and OSS examples for modern replacements.
 
 ## Deprecated Code & Library Migration
 When you encounter deprecated methods/APIs during refactoring:

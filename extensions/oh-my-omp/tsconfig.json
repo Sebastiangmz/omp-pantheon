@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": [],
+    "allowImportingTsExtensions": true
+  },
+  "include": ["index.ts", "loop/*.ts", "hooks/*.ts"]
+}
