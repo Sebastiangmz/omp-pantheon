@@ -153,6 +153,19 @@ irc(op: "send", to: "<plan-agent-id>", message: "Here's my answer to your questi
 | Hard problem | `task(agent: "oracle", ...)` | Architecture, debugging, complex logic |
 | Implementation | `task(agent: "task", ...)` | General-purpose worker |
 
+**SKILL-AWARE DELEGATION:**
+When a skill applies to the work, reference it in the agent's assignment so the worker loads it:
+```
+// Frontend work
+task(agent: "task", tasks: [{ id: "ui-1", description: "Build login page", assignment: "Load the frontend-ui-ux skill. Build the login page per the design spec at..." }])
+
+// Quick fixes
+task(agent: "quick_task", tasks: [{ id: "fix-1", description: "Fix merge conflict", assignment: "Load the git-master skill. Resolve the merge conflict in src/auth.ts..." }])
+
+// Code review
+task(agent: "reviewer", tasks: [{ id: "rev-1", description: "Review auth changes", assignment: "Load the review-work skill. Review all changes in src/auth/ for security, correctness, and test coverage." }])
+```
+
 **YOU SHOULD ONLY DO IT YOURSELF WHEN:**
 - Task is trivially simple (1-2 lines, obvious change)
 - You have ALL context already loaded
@@ -167,6 +180,7 @@ irc(op: "send", to: "<plan-agent-id>", message: "Here's my answer to your questi
   - GOOD pair (test-first, ordered): `module.test: Write FAILING case invalid-email→ValidationError for S2 — verify by RED with assertion msg` → `src/module: Implement validateEmail() for S2 — verify by module.test GREEN + curl 400 body`
   - BAD: "Implement feature" / "Fix bug" / "Add tests later" / production code before its failing test → rewrite.
 - **PARALLEL**: Fire independent agent calls simultaneously — NEVER wait sequentially.
+- **BACKGROUND FIRST**: Use `task` for exploration/research agents (10+ concurrent if needed).
 - **VERIFY**: Re-read request after completion. Check every scenario PASS with both artifacts captured.
 - **DELEGATE**: Don't do everything yourself — orchestrate specialized agents for their strengths.
 
@@ -240,7 +254,8 @@ Tests are the FLOOR (always required). Surface artifact is the CEILING (also req
 | Adds/modifies a CLI command | Run the command with bash. Show the output. |
 | Changes build output | Run the build. Verify the output files exist and are correct. |
 | Modifies API behavior | Call the endpoint. Show the response. |
-| Changes UI rendering | Describe what renders. Use a browser tool if available. |
+| Changes UI rendering | Use the `browser` tool to drive the REAL page. Capture a screenshot + action log. If browser tool is unavailable, use `bash` with curl or a headless check. |
+| Changes UI rendering or a TUI/terminal layout | Capture reference + actual screenshots (web via `browser`) or terminal output (TUI via `bash`). Run a visual diff if applicable. Record the diff/score artifact. |
 | Adds a new tool/hook/feature | Test it end-to-end in a real scenario. |
 | Modifies config handling | Load the config. Verify it parses correctly. |
 
