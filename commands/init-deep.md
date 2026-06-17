@@ -38,7 +38,7 @@ Generate hierarchical AGENTS.md files. Root + complexity-scored subdirectories.
 
 ### Fire Background Explore Agents IMMEDIATELY
 
-Don't wait — fire these in parallel via the `task` tool with `agent: "explore"`:
+Don't wait — these run async while main session works. Fire all at once via a single `task` call:
 
 ```
 task(agent: "explore", tasks: [
@@ -70,6 +70,17 @@ total_lines=$(find . -type f \( -name "*.ts" -o -name "*.py" -o -name "*.go" \) 
 large_files=$(find . -type f \( -name "*.ts" -o -name "*.py" \) -not -path '*/node_modules/*' -exec wc -l {} + 2>/dev/null | awk '$1 > 500 {count++} END {print count+0}')
 max_depth=$(find . -type d -not -path '*/node_modules/*' -not -path '*/.git/*' | awk -F/ '{print NF}' | sort -rn | head -1)
 ```
+
+Example spawning:
+```
+// 500 files, 50k lines, depth 6, 15 large files → spawn 5+5+2+1 = 13 additional agents
+task(agent: "explore", tasks: [
+  { id: "large-files", description: "Analyze large files", assignment: "Large file analysis: FIND files >500 lines, REPORT complexity hotspots" },
+  { id: "deep-modules", description: "Explore deep modules", assignment: "Deep modules at depth 4+: FIND hidden patterns, internal conventions" },
+  { id: "shared-utils", description: "Find shared utilities", assignment: "Cross-cutting concerns: FIND shared utilities across directories" }
+  // ... more based on calculation
+])
+```
 </dynamic-agents>
 
 ### Main Session: Concurrent Analysis
@@ -98,11 +109,24 @@ If `--create-new`: Read all existing first (preserve context) → then delete al
 
 #### 3. LSP Codemap (if available)
 
-Use `lsp` tool with `action: symbols` to gather entry points and key symbols (parallel where independent).
+Use `lsp` tool to gather entry points and key symbols (parallel where independent):
+
+```
+lsp(action: "symbols", file: "src/index.ts")
+lsp(action: "symbols", file: "main.py")
+lsp(action: "symbols", file: ".", query: "class")
+lsp(action: "symbols", file: ".", query: "interface")
+lsp(action: "symbols", file: ".", query: "function")
+lsp(action: "references", file: "...", line: X, symbol: "...")
+```
 
 **LSP Fallback**: If unavailable, rely on `explore` agents + `ast_grep`.
 
-**Mark "discovery" as completed** when all agents return.
+### Collect Background Results
+
+After main session analysis is done, collect all task results from the parallel `explore` agents.
+
+**Merge: bash + LSP + existing + explore findings. Mark "discovery" as completed.**
 
 ---
 
@@ -158,11 +182,11 @@ NEVER use `write` to overwrite an existing file. ALWAYS check existence first vi
 {1-2 sentences: what + core stack}
 
 ## STRUCTURE
-\`\`\`
+```
 {root}/
 ├── {dir}/    # {non-obvious purpose only}
 └── {entry}
-\`\`\`
+```
 
 ## WHERE TO LOOK
 | Task | Location | Notes |
@@ -184,9 +208,9 @@ NEVER use `write` to overwrite an existing file. ALWAYS check existence first vi
 {Project-specific}
 
 ## COMMANDS
-\`\`\`bash
+```bash
 {dev/test/build}
-\`\`\`
+```
 
 ## NOTES
 {Gotchas}
@@ -196,7 +220,7 @@ NEVER use `write` to overwrite an existing file. ALWAYS check existence first vi
 
 ### Subdirectory AGENTS.md (Parallel)
 
-Launch writing tasks in parallel for each location via `task(agent: "task", tasks: [...])`:
+Launch writing tasks in parallel for each scored location via `task(agent: "task", tasks: [...])`:
 
 ```
 task(agent: "task", tasks: [

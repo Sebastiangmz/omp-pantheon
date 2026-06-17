@@ -26,9 +26,13 @@ task(agent: "atlas", tasks: [{ id: "start-work", description: "Execute work plan
 2. **Check for active boulder state**: Read `.sisyphus/boulder.json` if it exists
 
 3. **Decision logic**:
-   - If `.sisyphus/boulder.json` exists AND plan is NOT complete (has unchecked boxes):
-     - **APPEND** current session to `session_ids`
-     - Continue work on existing plan
+   - If multiple active works are listed in your context:
+     - This means boulder.json has more than one work with status: `active` or `paused`
+     - Use the `ask` tool to ask the user which plan to resume
+     - Resume by running `/start-work {plan-name}` for the selected plan
+     - If the user says "start a new plan", continue with cold-start auto-selection logic
+   - If exactly one active work is listed and the user did not name a plan:
+     - Auto-resume that single active work
    - If no active plan OR plan is complete:
      - List available plan files
      - If ONE plan: auto-select it
@@ -37,7 +41,7 @@ task(agent: "atlas", tasks: [{ id: "start-work", description: "Execute work plan
 4. **Worktree Setup** (ONLY when `--worktree` was explicitly specified and `worktree_path` not already set in boulder.json):
    1. `git worktree list --porcelain` — see available worktrees
    2. Create: `git worktree add <absolute-path> <branch-or-HEAD>`
-   3. Update `boulder.json` to add `"worktree_path": "<absolute-path>"`
+   3. Update boulder.json to add `"worktree_path": "<absolute-path>"`
    4. All work happens inside that worktree directory
 
 5. **Create/Update `boulder.json`**:
@@ -51,7 +55,7 @@ task(agent: "atlas", tasks: [{ id: "start-work", description: "Execute work plan
    }
    ```
 
-6. **Read the plan file** and start executing tasks according to the `atlas` workflow.
+6. **Read the plan file** and start executing tasks according to the `atlas` workflow
 
 ## OUTPUT FORMAT
 
@@ -95,7 +99,7 @@ Reading plan and beginning execution...
 - Always update `boulder.json` BEFORE starting work
 - If `worktree_path` is set in boulder.json, all work happens inside that worktree directory
 - Read the FULL plan file before delegating any tasks
-- Follow `atlas` delegation protocols (6-section task prompt format)
+- Follow `atlas` delegation protocols (7-section format)
 
 ## TASK BREAKDOWN (MANDATORY)
 
@@ -107,11 +111,23 @@ After reading the plan file, you MUST decompose every plan task into granular, i
 - Include: file to modify, what to change, expected behavior, and how to verify
 - Do NOT leave any task vague — "implement feature X" is NOT acceptable; "add `validateToken()` to `src/auth/middleware.ts` that checks JWT expiry and returns 401" IS acceptable
 
+**Example breakdown**:
+Plan task: `- [ ] Add rate limiting to API`
+→ Todo items:
+  1. Create `src/middleware/rate-limiter.ts` with sliding window algorithm (max 100 req/min per IP)
+  2. Add RateLimiter middleware to `src/app.ts` router chain, before auth middleware
+  3. Add rate limit headers (X-RateLimit-Limit, X-RateLimit-Remaining) to response in `rate-limiter.ts`
+  4. Add test: verify 429 response after exceeding limit in `src/middleware/rate-limiter.test.ts`
+  5. Add test: verify headers are present on normal responses
+
+Register these as todos so progress is tracked and visible throughout the session.
+
 ## WORKTREE COMPLETION
 
 When working in a worktree (`worktree_path` is set in boulder.json) and ALL plan tasks are complete:
 1. Commit all remaining changes in the worktree
 2. **Sync `.sisyphus/` state back**: Copy `.sisyphus/` from the worktree to the main repo before removal.
+   This is CRITICAL when `.sisyphus/` is gitignored — state written during worktree execution would otherwise be lost.
    ```bash
    cp -r <worktree-path>/.sisyphus/* <main-repo>/.sisyphus/ 2>/dev/null || true
    ```
@@ -120,7 +136,7 @@ When working in a worktree (`worktree_path` is set in boulder.json) and ALL plan
 5. If merge succeeds, clean up: `git worktree remove <worktree-path>`
 6. Remove the `boulder.json` state
 
-This is the DEFAULT behavior when `--worktree` was used. Skip merge only if the user explicitly instructs otherwise.
+This is the DEFAULT behavior when `--worktree` was used. Skip merge only if the user explicitly instructs otherwise (e.g., asks to create a PR instead).
 </command-instruction>
 
 <user-request>

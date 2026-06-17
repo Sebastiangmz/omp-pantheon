@@ -35,12 +35,13 @@ Execute these tools to gather concrete data:
 3. `bash("git status --porcelain")` — uncommitted changes
 
 Analyze the gathered outputs to understand:
-- What the user asked for (exact wording)
 - What work was completed
-- What tasks remain incomplete
+- What tasks remain incomplete (include todo state)
 - What decisions were made
-- What files were modified or discussed
+- What files were modified or discussed (include git diff/stat + status)
 - What patterns, constraints, or preferences were established
+
+Capture USER REQUESTS verbatim from what the user said in this session. Do not paraphrase, summarize, or "tidy up" the user's wording. Do not reconstruct user requests from memory — always quote the user's actual words.
 
 ---
 
@@ -51,16 +52,17 @@ Write the context summary from first person perspective ("I did...", "I told you
 Focus on:
 - Capabilities and behavior, not file-by-file implementation details
 - What matters for continuing the work
-- USER REQUESTS (AS-IS) must be verbatim (do not paraphrase)
+- Avoiding excessive implementation details (variable names, storage keys, constants) unless critical
+- USER REQUESTS (AS-IS) must be the user's exact words, copied verbatim (do not paraphrase, do not reconstruct from memory)
 - EXPLICIT CONSTRAINTS must be verbatim only (do not invent)
 
-Questions to consider:
+Questions to consider when extracting:
 - What did I just do or implement?
-- What instructions did I already give which are still relevant?
+- What instructions did I already give which are still relevant (e.g. follow patterns in the codebase)?
 - What files did I tell you are important or that I am working on?
 - Did I provide a plan or spec that should be included?
 - What did I already tell you that is important (libraries, patterns, constraints, preferences)?
-- What important technical details did I discover?
+- What important technical details did I discover (APIs, methods, patterns)?
 - What caveats, limitations, or open questions did I find?
 
 ---
@@ -127,7 +129,7 @@ CONTEXT FOR CONTINUATION
 
 Rules for the summary:
 - Plain text with bullets
-- No markdown headers with `#` (use the format above with dashes)
+- No markdown headers with # (use the format above with dashes)
 - No bold, italic, or code fences within content
 - Use workspace-relative paths for files
 - Keep it focused — only include what matters for continuation
@@ -156,7 +158,7 @@ The new session will have all context needed to continue seamlessly.
 
 # IMPORTANT CONSTRAINTS
 
-- DO NOT attempt to programmatically create new sessions
+- DO NOT attempt to programmatically create new sessions (no API available to agents)
 - DO provide a self-contained summary that works without access to this session
 - DO include workspace-relative file paths
 - DO NOT include sensitive information (API keys, credentials, secrets)
