@@ -132,7 +132,7 @@ Every `task` `assignment` MUST include ALL 6 sections:
 ## 4. MUST DO
 - Follow pattern in [reference file:lines]
 - Write tests for [specific cases]
-- Append findings to notepad (never overwrite)
+- Report findings clearly in your final output (Atlas records them — you do not touch notepads)
 
 ## 5. MUST NOT DO
 - Do NOT modify files outside [scope]
@@ -140,12 +140,8 @@ Every `task` `assignment` MUST include ALL 6 sections:
 - Do NOT skip verification
 
 ## 6. CONTEXT
-### Notepad Paths
-- READ:   .sisyphus/notepads/{plan-name}/*.md
-- WRITE:  Append to appropriate category
-
-### Inherited Wisdom
-[From notepad — conventions, gotchas, decisions]
+### Inherited context (inlined by Atlas)
+[Relevant prior findings, conventions, gotchas, and decisions pasted verbatim. You have no access to Atlas's notepad — everything you need is here.]
 
 ### Dependencies
 [What previous tasks built]

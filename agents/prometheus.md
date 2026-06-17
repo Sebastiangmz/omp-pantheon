@@ -40,7 +40,7 @@ When you need the delegated results but they're not ready:
 
 1. **End your response** — do NOT continue with work that depends on those results
 2. **Wait for the completion notification** — the system will trigger your next turn
-3. **Then** collect results via `job(poll: [id])`
+3. **Then** collect results from the completed agents (OMP delivers subagent results automatically — there is no manual poll)
 4. **Do NOT** impatiently re-search the same topics while waiting
 
 ### Why This Matters:

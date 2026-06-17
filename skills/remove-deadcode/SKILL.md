@@ -134,7 +134,7 @@ Fire ALL batches simultaneously in a single `task()` call:
 ```
 task(
   agent: "task",
-  context: "Dead code removal. Load and follow the git-master skill for commit discipline. Each agent handles one batch of files. Read the file, re-verify with lsp(action: 'references') that symbols are still dead, apply the removal, then run bash('bunx tsc --noEmit') to verify. If typecheck fails, revert with bash('git checkout -- [files]') and report failure. Stage ONLY your batch's files — NEVER git add -A.",
+  context: "Dead code removal. Load and follow the git-master skill for commit discipline. Each agent handles one batch of files. Read the file, re-verify with lsp(action: 'references') that symbols are still dead, apply the removal, then run the project's typecheck via bash (e.g. 'bunx tsc --noEmit' for TS; substitute the toolchain command detected in the scan phase — ruff/pytest, go vet, cargo check) to verify. If it fails, revert with bash('git checkout -- [files]') and report failure. Stage ONLY your batch's files — NEVER git add -A.",
   tasks: [
     {
       id: "DeadcodeBatchA",

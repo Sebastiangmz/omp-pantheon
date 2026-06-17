@@ -102,21 +102,38 @@ function detectSlopComments(
 	return findings;
 }
 
-/** Pull all string-valued fields out of the tool input as candidate new text. */
-function extractWrittenText(input: unknown): string {
-	if (!input || typeof input !== "object") return "";
-	const parts: string[] = [];
-	for (const value of Object.values(input as Record<string, unknown>)) {
-		if (typeof value === "string") parts.push(value);
+/** Recursively collect every string value (incl. nested `edits[].new_text`, patch bodies). */
+function collectStrings(value: unknown, out: string[]): void {
+	if (typeof value === "string") {
+		out.push(value);
+	} else if (Array.isArray(value)) {
+		for (const v of value) collectStrings(v, out);
+	} else if (value && typeof value === "object") {
+		for (const v of Object.values(value as Record<string, unknown>)) collectStrings(v, out);
 	}
-	return parts.join("\n");
 }
+
+function extractWrittenText(input: unknown): string {
+	const out: string[] = [];
+	collectStrings(input, out);
+	return out.join("\n");
+}
+
+// Path is explicit for write/replace/patch; embedded in the body for hashline/apply_patch.
+const HASHLINE_HEADER_RE = /\[([^\]\s#]+)#[A-Fa-f0-9]{4}\]/; // [path#TAG]
+const PATCH_FILE_RE = /\*\*\*\s+(?:Update|Add|Delete) File:\s*(.+)/;
 
 function filePathOf(input: unknown): string | undefined {
 	if (!input || typeof input !== "object") return undefined;
 	const rec = input as Record<string, unknown>;
-	const p = rec.path ?? rec.filePath ?? rec.file_path;
-	return typeof p === "string" ? p : undefined;
+	const direct = rec.path ?? rec.filePath ?? rec.file_path;
+	if (typeof direct === "string") return direct;
+	const blob = extractWrittenText(input);
+	const h = HASHLINE_HEADER_RE.exec(blob);
+	if (h) return h[1];
+	const p = PATCH_FILE_RE.exec(blob);
+	if (p) return p[1].trim();
+	return undefined;
 }
 
 // ── Registration ────────────────────────────────────────────────────────
@@ -144,28 +161,29 @@ export function registerCommentChecker(pi: ExtensionAPI): void {
 		if (!CHECKED_TOOLS[event.toolName] || event.isError) return;
 
 		const filePath = filePathOf(event.input);
-		if (!filePath || isNonCodeFile(filePath)) return;
+		// Only skip when we KNOW the file is prose/data. Unknown path → still scan
+		// (hashline/apply_patch may hide the path); per-line detection is cheap.
+		if (filePath && isNonCodeFile(filePath)) return;
+		const dedupKey = filePath ?? "(unknown)";
 		const now = Date.now();
-		const last = lastWarnedByFile.get(filePath) ?? 0;
+		const last = lastWarnedByFile.get(dedupKey) ?? 0;
 		if (now - last < DEDUP_WINDOW_MS) return;
 
-		const written = extractWrittenText(event.input);
-		if (!hasCommentSyntax(written)) return;
-
-		const findings = detectSlopComments(written);
+		// detectSlopComments filters per-line; no broken whole-blob pre-gate here.
+		const findings = detectSlopComments(extractWrittenText(event.input));
 		if (findings.length === 0) return;
 
-		lastWarnedByFile.set(filePath, now);
+		lastWarnedByFile.set(dedupKey, now);
 
 		const warning = [
 			`<system-reminder type="comment-checker">`,
-			`Detected ${findings.length} potentially redundant/obvious comment${findings.length > 1 ? "s" : ""} in \`${filePath}\`:`,
+			`Detected ${findings.length} potentially redundant/obvious comment${findings.length > 1 ? "s" : ""} in \`${filePath ?? "the edited file"}\`:`,
 			...findings.slice(0, 8).map((f) => `  • ${f.reason}: ${f.line}`),
 			`Remove comments that merely restate the code. Good comments explain *why*, not *what*.`,
 			`</system-reminder>`,
 		].join("\n");
 
-		pi.logger.debug(`[${HOOK_NAME}] ${findings.length} slop comment(s) in ${filePath}`);
+		pi.logger.debug(`[${HOOK_NAME}] ${findings.length} slop comment(s) in ${dedupKey}`);
 
 		// Append (don't replace) the warning to what the agent sees.
 		return {

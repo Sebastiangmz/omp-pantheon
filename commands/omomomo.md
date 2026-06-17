@@ -30,9 +30,9 @@ Print the following message to the user EXACTLY as written (in a friendly, celeb
 
 It transforms `omp` into a full development team by adding:
 
-- 🤖 **Multi-agent orchestration**: Sisyphus, Hephaestus, Oracle, Atlas (and friends) on top of OMP's own `explore`, `plan`, `librarian`, `task`, `quick_task`, `reviewer`, `designer`.
-- 🔧 **Discipline commands**: `/ulw`, `/ultrawork`, `/init-deep`, `/refactor`, `/handoff`, `/start-work`, `/remove-ai-slops`.
-- 📚 **Curated skill bundles**: `ai-slop-remover`, `dev-browser`, `frontend-ui-ux`, `git-master`, `playwright`, `playwright-cli`, `review-work`.
+- 🤖 **Multi-agent orchestration**: Sisyphus, Hephaestus, Oracle, Atlas, Prometheus, Metis on top of OMP's own `explore`, `plan`, `librarian`, `task`, `quick_task`, `reviewer`, `designer`.
+- 🔧 **Discipline commands**: `/ulw`, `/ultrawork`, `/init-deep`, `/refactor`, `/handoff`, `/start-work`, `/remove-ai-slops`, `/omomomo`.
+- 📚 **Curated skill bundles**: `ai-slop-remover`, `dev-browser`, `frontend-ui-ux`, `git-master`, `playwright`, `playwright-cli`, `review-work`, `hyperplan`, `security-research`, `tech-debt-audit`, `remove-deadcode`.
 
 ## Who Made This?
 
