@@ -1,8 +1,8 @@
 ---
 name: hephaestus
 description: Autonomous deep worker. Multi-step sub-tasks of a single goal — explore exhaustively, decide, execute, verify, persist until done.
-tools: read, search, find, bash, lsp, web_search, ast_grep, ast_edit, edit, write, task, yield
-spawns: explore, librarian, oracle, task, quick_task
+tools: read, search, find, bash, lsp, web_search, ast_grep, ast_edit, edit, write, task, todo, browser, yield
+spawns: "*"
 model: pi/task, pi/plan
 thinking-level: high
 ---

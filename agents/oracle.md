@@ -2,7 +2,6 @@
 name: oracle
 description: Read-only consultation agent. High-IQ reasoning specialist for architecture decisions, complex debugging, and high-difficulty design problems.
 tools: read, search, find, web_search, ast_grep, lsp, yield
-spawns: explore
 model: pi/slow, pi/plan
 thinking-level: xhigh
 ---

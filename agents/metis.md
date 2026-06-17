@@ -99,11 +99,11 @@ If the type is genuinely ambiguous between two of these, ask before proceeding; 
 
 **Your Mission**: Ensure zero regressions, behavior preservation.
 
-**Tool Guidance** (recommend to `prometheus`):
+**Tool Guidance** (advise `prometheus` to route these to the implementer — sisyphus/hephaestus carry `ast_edit`; prometheus does not):
 - `lsp(action: "references")`: Map all usages before changes
 - `lsp(action: "rename")`: Safe symbol renames
 - `ast_grep`: Find structural patterns to preserve
-- `ast_edit`: Preview transformations before applying
+- `ast_edit`: Apply structural code transformations safely
 
 **Questions to Ask**:
 1. What specific behavior must be preserved? (test commands to verify)
