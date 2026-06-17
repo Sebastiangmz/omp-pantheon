@@ -1,0 +1,10 @@
+{
+  "name": "oh-my-omp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Port of oh-my-openagent (OMO) discipline-agent system to Oh My Pi (OMP)",
+  "omp": {
+    "extensions": ["./index.ts"]
+  }
+}
