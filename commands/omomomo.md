@@ -51,8 +51,8 @@ Original OMO concept and prompt lineage: **[code-yeongyu](https://github.com/cod
 
 OMP runtime: [oh-my-pi](https://github.com/can1357/oh-my-pi).
 
-Integrated Pantheon + Seshat + Honcho + SpecSafe bundle:
-`/Users/sebastian/.omp/omp-pantheon`.
+Integrated Pantheon + Seshat + Honcho + SpecSafe bundle: this repository,
+installed into your OMP agent tree.
 
 ---
 
