@@ -1,0 +1,3 @@
+KEY       STATE           ASSIGNEE      PRIORITY    UPDATED     TITLE
+-------------------------------------------------------------------------------
+CUR-92    In Progress     luci          No priority 2026-04-27  Login fix

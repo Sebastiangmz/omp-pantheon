@@ -1,0 +1,12 @@
+key:         CUR-92
+title:       Login fix
+state:       Triage (triage)
+assignee:    luci
+team:        CUR
+priority:    No priority
+url:         https://linear.app/cur/issue/CUR-92
+created:     2026-04-27
+updated:     2026-04-27
+
+description:
+Fixture issue still in triage.

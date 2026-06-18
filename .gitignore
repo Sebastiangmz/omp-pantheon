@@ -2,3 +2,13 @@ node_modules/
 *.log
 *.bak.*
 .DS_Store
+
+.pi/.honcho-state.json
+.pi/.honcho-state.json.corrupt-*
+.pi/.push-log.jsonl
+.pi/.linear-log.jsonl
+.pi/.github-log.jsonl
+.pi/.docs-registry-log.jsonl
+.pi/.doc-drafts/
+.pi/.docs-cache/
+.pi/.bootstrap-log.jsonl
