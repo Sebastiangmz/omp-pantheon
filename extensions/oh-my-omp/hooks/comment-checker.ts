@@ -87,7 +87,9 @@ function detectSlopComments(
 ): Array<{ line: string; reason: string }> {
 	const findings: Array<{ line: string; reason: string }> = [];
 	for (const rawLine of text.split("\n")) {
-		const trimmed = rawLine.replace(/^[+\s]+/, (m) => m.replace(/\+/g, "")).trim();
+		const trimmed = rawLine
+			.replace(/^[+\s]+/, (m) => m.replace(/\+/g, ""))
+			.trim();
 		if (!hasCommentSyntax(trimmed)) continue;
 		const body = stripCommentPrefix(trimmed);
 		if (!body) continue;
@@ -109,7 +111,8 @@ function collectStrings(value: unknown, out: string[]): void {
 	} else if (Array.isArray(value)) {
 		for (const v of value) collectStrings(v, out);
 	} else if (value && typeof value === "object") {
-		for (const v of Object.values(value as Record<string, unknown>)) collectStrings(v, out);
+		for (const v of Object.values(value as Record<string, unknown>))
+			collectStrings(v, out);
 	}
 }
 
@@ -143,9 +146,24 @@ function filePathOf(input: unknown): string | undefined {
  * (markdown headings/bullets, etc.) — scanning them produces false positives.
  */
 const SKIP_EXTENSIONS: Record<string, true> = {
-	md: true, mdx: true, markdown: true, txt: true, rst: true, adoc: true,
-	json: true, jsonc: true, csv: true, tsv: true, lock: true, svg: true,
-	html: true, htm: true, xml: true, yaml: true, yml: true, toml: true,
+	md: true,
+	mdx: true,
+	markdown: true,
+	txt: true,
+	rst: true,
+	adoc: true,
+	json: true,
+	jsonc: true,
+	csv: true,
+	tsv: true,
+	lock: true,
+	svg: true,
+	html: true,
+	htm: true,
+	xml: true,
+	yaml: true,
+	yml: true,
+	toml: true,
 };
 
 function isNonCodeFile(filePath: string): boolean {
@@ -183,7 +201,9 @@ export function registerCommentChecker(pi: ExtensionAPI): void {
 			`</system-reminder>`,
 		].join("\n");
 
-		pi.logger.debug(`[${HOOK_NAME}] ${findings.length} slop comment(s) in ${dedupKey}`);
+		pi.logger.debug(
+			`[${HOOK_NAME}] ${findings.length} slop comment(s) in ${dedupKey}`,
+		);
 
 		// Append (don't replace) the warning to what the agent sees.
 		return {

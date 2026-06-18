@@ -37,7 +37,10 @@ export default async function (pi: ExtensionAPI): Promise<void> {
 	}));
 
 	pi.on("session_start", () => {
-		pi.logger.debug("oh-my-omp loaded", { version: VERSION, skills: SKILLS_DIR });
+		pi.logger.debug("oh-my-omp loaded", {
+			version: VERSION,
+			skills: SKILLS_DIR,
+		});
 	});
 
 	// Loop runtime: state-machine driven by `agent_end`.

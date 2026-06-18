@@ -16,7 +16,9 @@ const PROMISE_RE = /<promise>\s*([^<\s][^<]*?)\s*<\/promise>/i;
  * Extract the promise token from an assistant message.
  * Returns the matched token (verbatim from the message) or null.
  */
-export function extractPromiseTag(message: AgentMessage | undefined): string | null {
+export function extractPromiseTag(
+	message: AgentMessage | undefined,
+): string | null {
 	if (!message || message.role !== "assistant") return null;
 	const text = collectAssistantText(message);
 	if (!text) return null;
@@ -28,7 +30,10 @@ export function extractPromiseTag(message: AgentMessage | undefined): string | n
  * True iff the most recent assistant message contains a promise tag whose
  * token matches `expected` (case-insensitive).
  */
-export function detectPromise(messages: AgentMessage[], expected: string): boolean {
+export function detectPromise(
+	messages: AgentMessage[],
+	expected: string,
+): boolean {
 	for (let i = messages.length - 1; i >= 0; i--) {
 		const msg = messages[i];
 		if (msg.role !== "assistant") continue;
@@ -44,9 +49,14 @@ function collectAssistantText(message: AgentMessage): string {
 	if (typeof content === "string") return content;
 	if (Array.isArray(content)) {
 		return content
-			.map(part => {
+			.map((part) => {
 				if (typeof part === "string") return part;
-				if (part && typeof part === "object" && "text" in part && typeof (part as { text?: unknown }).text === "string") {
+				if (
+					part &&
+					typeof part === "object" &&
+					"text" in part &&
+					typeof (part as { text?: unknown }).text === "string"
+				) {
 					return (part as { text: string }).text;
 				}
 				return "";

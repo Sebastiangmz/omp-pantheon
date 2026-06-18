@@ -69,44 +69,71 @@ function parseLoopArgs(raw: string): ParsedArgs {
 	return args;
 }
 
-function buildKickoffPrompt(loopType: "Ralph" | "ULTRAWORK", args: StartLoopArgs): string {
+function buildKickoffPrompt(
+	loopType: "Ralph" | "ULTRAWORK",
+	args: StartLoopArgs,
+): string {
 	const lines: string[] = [];
 	lines.push(`<command-instruction>`);
-	lines.push(`You are starting a ${loopType} Loop — a self-referential development loop that runs until task completion.`);
+	lines.push(
+		`You are starting a ${loopType} Loop — a self-referential development loop that runs until task completion.`,
+	);
 	lines.push(``);
 	lines.push(`## How the loop works`);
 	lines.push(``);
 	lines.push(`1. You will work on the task continuously.`);
 	if (loopType === "ULTRAWORK") {
-		lines.push(`2. When you believe the work is complete, output: \`<promise>${args.completionPromise}</promise>\``);
-		lines.push(`3. That does NOT finish the loop yet. The system will require Oracle verification.`);
-		lines.push(`4. The loop only ends after the system confirms Oracle verified the result.`);
+		lines.push(
+			`2. When you believe the work is complete, output: \`<promise>${args.completionPromise}</promise>\``,
+		);
+		lines.push(
+			`3. That does NOT finish the loop yet. The system will require Oracle verification.`,
+		);
+		lines.push(
+			`4. The loop only ends after the system confirms Oracle verified the result.`,
+		);
 		lines.push(`5. Maximum iterations: ${args.maxIterations ?? 500}.`);
 	} else {
-		lines.push(`2. When you believe the task is FULLY complete, output: \`<promise>${args.completionPromise}</promise>\``);
-		lines.push(`3. If you don't output the promise, the loop will automatically inject another prompt to continue.`);
+		lines.push(
+			`2. When you believe the task is FULLY complete, output: \`<promise>${args.completionPromise}</promise>\``,
+		);
+		lines.push(
+			`3. If you don't output the promise, the loop will automatically inject another prompt to continue.`,
+		);
 		lines.push(`4. Maximum iterations: ${args.maxIterations ?? 100}.`);
 	}
 	lines.push(``);
 	lines.push(`## Rules`);
 	lines.push(``);
 	lines.push(`- Focus on completing the task fully, not partially.`);
-	lines.push(`- Do not output the completion promise until the task is truly done.`);
-	lines.push(`- Each iteration should make meaningful progress toward the goal.`);
+	lines.push(
+		`- Do not output the completion promise until the task is truly done.`,
+	);
+	lines.push(
+		`- Each iteration should make meaningful progress toward the goal.`,
+	);
 	lines.push(`- If stuck, try different approaches.`);
 	lines.push(`- Use todos to track your progress.`);
 	if (loopType === "ULTRAWORK") {
-		lines.push(`- After you emit the completion promise, run Oracle verification when instructed.`);
-		lines.push(`- Do not treat the promise as final completion until Oracle verifies it.`);
+		lines.push(
+			`- After you emit the completion promise, run Oracle verification when instructed.`,
+		);
+		lines.push(
+			`- Do not treat the promise as final completion until Oracle verifies it.`,
+		);
 	}
 	lines.push(``);
 	lines.push(`## Exit conditions`);
 	lines.push(``);
 	if (loopType === "ULTRAWORK") {
-		lines.push(`1. **Verified completion**: Oracle verifies the result and the system confirms it.`);
+		lines.push(
+			`1. **Verified completion**: Oracle verifies the result and the system confirms it.`,
+		);
 		lines.push(`2. **Cancel**: User runs \`/cancel-ralph\`.`);
 	} else {
-		lines.push(`1. **Completion**: Output your completion promise tag when fully complete.`);
+		lines.push(
+			`1. **Completion**: Output your completion promise tag when fully complete.`,
+		);
 		lines.push(`2. **Max iterations**: Loop stops automatically at limit.`);
 		lines.push(`3. **Cancel**: User runs \`/cancel-ralph\`.`);
 	}
@@ -118,9 +145,13 @@ function buildKickoffPrompt(loopType: "Ralph" | "ULTRAWORK", args: StartLoopArgs
 	return lines.join("\n");
 }
 
-export function registerLoopCommands(pi: ExtensionAPI, runtime: LoopRuntime): void {
+export function registerLoopCommands(
+	pi: ExtensionAPI,
+	runtime: LoopRuntime,
+): void {
 	pi.registerCommand("ralph-loop", {
-		description: "Start a Ralph Loop — runs until completion promise or max-iterations",
+		description:
+			"Start a Ralph Loop — runs until completion promise or max-iterations",
 		handler: async (rawArgs, ctx) => {
 			const parsed = parseLoopArgs(rawArgs);
 			if (!parsed.task) {
@@ -143,7 +174,8 @@ export function registerLoopCommands(pi: ExtensionAPI, runtime: LoopRuntime): vo
 	});
 
 	pi.registerCommand("ulw-loop", {
-		description: "Start an ULTRAWORK Loop — runs until Oracle-verified completion",
+		description:
+			"Start an ULTRAWORK Loop — runs until Oracle-verified completion",
 		handler: async (rawArgs, ctx) => {
 			const parsed = parseLoopArgs(rawArgs);
 			if (!parsed.task) {
@@ -170,7 +202,9 @@ export function registerLoopCommands(pi: ExtensionAPI, runtime: LoopRuntime): vo
 		handler: async (_args, ctx) => {
 			const { wasActive } = await runtime.cancel();
 			ctx.ui.notify(
-				wasActive ? "Loop cancelled — state cleared." : "No active loop to cancel.",
+				wasActive
+					? "Loop cancelled — state cleared."
+					: "No active loop to cancel.",
 				wasActive ? "info" : "warning",
 			);
 		},

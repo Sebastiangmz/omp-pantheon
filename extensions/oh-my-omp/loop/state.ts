@@ -50,7 +50,10 @@ export async function readLoopState(cwd: string): Promise<LoopState | null> {
 	}
 }
 
-export async function writeLoopState(cwd: string, state: LoopState): Promise<void> {
+export async function writeLoopState(
+	cwd: string,
+	state: LoopState,
+): Promise<void> {
 	const file = statePath(cwd);
 	await fs.mkdir(path.dirname(file), { recursive: true });
 	await fs.writeFile(file, JSON.stringify(state, null, 2), "utf-8");

@@ -95,7 +95,9 @@ export function registerTodoEnforcer(pi: ExtensionAPI): void {
 			.join("\n");
 		const done = all.length - incomplete.length;
 
-		pi.logger.debug(`[${HOOK_NAME}] continuing: ${incomplete.length} todos open`);
+		pi.logger.debug(
+			`[${HOOK_NAME}] continuing: ${incomplete.length} todos open`,
+		);
 
 		return {
 			continue: true,

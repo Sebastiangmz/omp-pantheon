@@ -63,7 +63,9 @@ export class LoopRuntime {
 
 	/** Called by the slash command handlers when the user starts a loop. */
 	async start(args: StartLoopArgs): Promise<LoopState> {
-		const max = args.maxIterations ?? (args.mode === "ulw" ? DEFAULT_ULW_MAX : DEFAULT_RALPH_MAX);
+		const max =
+			args.maxIterations ??
+			(args.mode === "ulw" ? DEFAULT_ULW_MAX : DEFAULT_RALPH_MAX);
 		const next: LoopState = {
 			mode: args.mode,
 			task: args.task,
@@ -99,7 +101,10 @@ export class LoopRuntime {
 	 *   - terminate the loop (clear state), or
 	 *   - inject a continuation user message that drives the next iteration.
 	 */
-	async onAgentEnd(event: AgentEndEvent, _ctx: ExtensionContext): Promise<void> {
+	async onAgentEnd(
+		event: AgentEndEvent,
+		_ctx: ExtensionContext,
+	): Promise<void> {
 		// Re-read in case another process / cancel command updated state mid-turn.
 		this.state = await readLoopState(this.cwd);
 		const state = this.state;
@@ -138,7 +143,9 @@ export class LoopRuntime {
 			const next = { ...state, awaitingOracle: true, iter: state.iter + 1 };
 			this.state = next;
 			await writeLoopState(this.cwd, next);
-			this.pi.sendUserMessage(this.ulwOracleVerificationMessage(state), { deliverAs: "followUp" });
+			this.pi.sendUserMessage(this.ulwOracleVerificationMessage(state), {
+				deliverAs: "followUp",
+			});
 			return;
 		}
 		if (state.iter + 1 >= state.maxIterations) {
@@ -159,7 +166,9 @@ export class LoopRuntime {
 		this.pi.sendUserMessage(prompt, { deliverAs: "followUp" });
 	}
 
-	private async terminate(reason: "completed" | "max-iter" | "cancelled" | "verified"): Promise<void> {
+	private async terminate(
+		reason: "completed" | "max-iter" | "cancelled" | "verified",
+	): Promise<void> {
 		await clearLoopState(this.cwd);
 		this.state = null;
 		const summary = (() => {
