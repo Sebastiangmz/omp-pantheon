@@ -1,0 +1,80 @@
+{
+	"_meta": {
+		"ttl_days_default": 7,
+		"_inert_warning": "This .omp/ copy of registry.json is currently INERT under omp dispatch. The active runtime path is .pi/skills/latest-docs/registry.json \u2014 both .omp/skills/latest-docs/bin/latest-docs.ts:84 and .omp/skills/latest-docs/bin/probe-registry.ts read only from there. Edits made here will be silently ignored. Until slice-009 consolidates the registry, edit the .pi/ copy or both copies in lockstep.",
+		"note": "Entries marked verified:false have plausible URLs that were not live-checked at seed time \u2014 confirm/repair during the end-to-end smoke pass via `latest-docs fetch <lib> --refresh`. Registry entries are edited via `latest-docs register <lib> <url> --i-approve` (audit-logged)."
+	},
+	"@honcho-ai/sdk": {
+		"url": "https://raw.githubusercontent.com/plastic-labs/honcho/main/sdks/typescript/README.md",
+		"type": "markdown",
+		"ttl_days": 7,
+		"verified": false
+	},
+	"@linear/sdk": {
+		"url": "https://raw.githubusercontent.com/linear/linear/master/packages/sdk/README.md",
+		"type": "markdown",
+		"ttl_days": 7,
+		"verified": false
+	},
+	"hono": {
+		"url": "https://hono.dev/docs/getting-started/basic",
+		"type": "html",
+		"selector": "main",
+		"ttl_days": 7,
+		"verified": false
+	},
+	"better-auth": {
+		"url": "https://www.better-auth.com/docs/introduction",
+		"type": "html",
+		"selector": "main",
+		"ttl_days": 7,
+		"verified": false
+	},
+	"drizzle-orm": {
+		"url": "https://orm.drizzle.team/docs/overview",
+		"type": "html",
+		"selector": "main",
+		"ttl_days": 7,
+		"verified": false
+	},
+	"@libsql/client": {
+		"url": "https://raw.githubusercontent.com/tursodatabase/libsql-client-ts/main/README.md",
+		"type": "markdown",
+		"ttl_days": 7,
+		"verified": false
+	},
+	"@cloudflare/workers-types": {
+		"url": "https://developers.cloudflare.com/workers/runtime-apis/",
+		"type": "html",
+		"selector": "main",
+		"ttl_days": 7,
+		"verified": false
+	},
+	"wrangler": {
+		"url": "https://developers.cloudflare.com/workers/wrangler/",
+		"type": "html",
+		"selector": "main",
+		"ttl_days": 7,
+		"verified": false
+	},
+	"@tanstack/start": {
+		"url": "https://tanstack.com/start/latest/docs/framework/react/overview",
+		"type": "html",
+		"selector": "main",
+		"ttl_days": 7,
+		"verified": false
+	},
+	"@tanstack/react-query": {
+		"url": "https://tanstack.com/query/latest/docs/framework/react/overview",
+		"type": "html",
+		"selector": "main",
+		"ttl_days": 7,
+		"verified": false
+	},
+	"zod": {
+		"url": "https://raw.githubusercontent.com/colinhacks/zod/main/README.md",
+		"type": "markdown",
+		"ttl_days": 7,
+		"verified": false
+	}
+}
