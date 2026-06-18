@@ -19,10 +19,11 @@ that doesn't stop until the work is done.
 
 | Layer | Pieces |
 |---|---|
-| **Agents** | `sisyphus` (orchestrator), `hephaestus` (deep worker), `oracle` (read-only consult), `atlas` (plan executor), `prometheus` (interview planner), `metis` (plan critic) |
+| **Agents** | Pantheon: `sisyphus`, `hephaestus`, `oracle`, `atlas`, `prometheus`, `metis`; Seshat: `steward`, `spec-writer`, `implementer`, `test-writer`, `reviewer`, `reviewer-kimi`, `validator`, `doc-scout` |
 | **Slash commands** | `/ultrawork` · `/ulw` · `/init-deep` · `/refactor` · `/handoff` · `/start-work` · `/remove-ai-slops` · `/omomomo` |
-| **Skills** | `git-master` · `frontend-ui-ux` · `dev-browser` · `playwright` · `playwright-cli` · `ai-slop-remover` · `review-work` · `hyperplan` · `security-research` · `tech-debt-audit` · `remove-deadcode` |
-| **Hooks** | `todo-enforcer` (yank idle agents back to incomplete todos), `comment-checker` (no AI-slop comments), `intent-gate` (verbalize true intent before acting) |
+| **Skills** | Pantheon skills plus Seshat/SpecSafe skills: `bootstrap`, `coherence`, `docs`, `env-doctor`, `github`, `latest-docs`, `linear`, `memory`, `push`, `specsafe` |
+| **Hooks** | Extension hooks: `todo-enforcer`, `comment-checker`, `intent-gate`; agent hooks: `specsafe-session`, `specsafe-subagents`, `i-approve`, `fallback-audit` |
+| **Tools** | Honcho durable-memory custom tool (`honcho_recall`, `honcho_search`, `honcho_remember`, `honcho_conclude`) |
 | **Loop** | Ralph / ULW self-referential loop runtime (`/ralph-loop`, `/ulw-loop`, `/cancel-ralph`, `/stop-continuation`) |
 
 ## Layout
@@ -31,7 +32,12 @@ that doesn't stop until the work is done.
 agents/                 OMP agent definitions (*.md)
 commands/               OMP slash commands (*.md)
 skills/<name>/SKILL.md  OMP skills
+hooks/*.ts              OMP lifecycle hooks from Seshat/SpecSafe
+tools/honcho/index.ts   Honcho durable-memory custom tool
 extensions/oh-my-omp/   the loop runtime + lifecycle hooks (TS extension)
+test/                   integration and regression tests for Seshat/Honcho/SpecSafe
+docs/                   port notes and migration context
+package.json            root test/typecheck runner for the integrated bundle
 install.sh              symlink/copy this bundle into ~/.omp/agent/
 ```
 
