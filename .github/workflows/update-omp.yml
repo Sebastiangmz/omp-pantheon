@@ -1,0 +1,125 @@
+name: Update OMP dependency
+
+on:
+  schedule:
+    - cron: "17 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-omp:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Check latest OMP version
+        id: omp
+        shell: bash
+        run: |
+          set -euo pipefail
+          latest="$(npm view @oh-my-pi/pi-coding-agent version)"
+          current="$(node -p "require('./package.json').devDependencies['@oh-my-pi/pi-coding-agent']")"
+          echo "latest=${latest}" >> "$GITHUB_OUTPUT"
+          echo "current=${current}" >> "$GITHUB_OUTPUT"
+          echo "Latest @oh-my-pi/pi-coding-agent: ${latest}"
+          echo "Current root range: ${current}"
+
+      - name: Update package manifests
+        shell: bash
+        env:
+          LATEST_OMP_VERSION: ${{ steps.omp.outputs.latest }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const latest = process.env.LATEST_OMP_VERSION;
+          if (!latest) throw new Error('LATEST_OMP_VERSION is required');
+
+          const files = [
+            'package.json',
+            'extensions/oh-my-omp/package.json',
+          ];
+
+          for (const file of files) {
+            const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+            const deps = pkg.devDependencies ?? (pkg.devDependencies = {});
+            deps['@oh-my-pi/pi-coding-agent'] = `^${latest}`;
+            fs.writeFileSync(file, `${JSON.stringify(pkg, null, 2)}\n`);
+          }
+          NODE
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Stop if no update
+        id: diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No OMP dependency update required."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --stat
+          fi
+
+      - name: Typecheck
+        if: steps.diff.outputs.changed == 'true'
+        run: bun run typecheck
+
+      - name: Test
+        if: steps.diff.outputs.changed == 'true'
+        run: bun run test
+
+      - name: Create or update pull request
+        if: steps.diff.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LATEST_OMP_VERSION: ${{ steps.omp.outputs.latest }}
+        run: |
+          set -euo pipefail
+          branch="automation/update-omp-${LATEST_OMP_VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add package.json bun.lock extensions/oh-my-omp/package.json extensions/oh-my-omp/bun.lock
+          git commit -m "chore: update OMP to ${LATEST_OMP_VERSION}"
+          git push --force-with-lease origin "$branch"
+
+          body="$(cat <<EOF
+          ## Summary
+          - update \`@oh-my-pi/pi-coding-agent\` to \`${LATEST_OMP_VERSION}\` in the root bundle and extension package
+          - refresh Bun lockfiles
+
+          ## Verification
+          - \`bun run typecheck\`
+          - \`bun run test\`
+
+          This PR was opened automatically by \`.github/workflows/update-omp.yml\`.
+          EOF
+          )"
+
+          if gh pr view "$branch" --json number --jq .number >/tmp/pr-number 2>/dev/null; then
+            pr_number="$(cat /tmp/pr-number)"
+            gh pr edit "$pr_number" --title "chore: update OMP to ${LATEST_OMP_VERSION}" --body "$body"
+            echo "Updated PR #${pr_number}"
+          else
+            gh pr create \
+              --base main \
+              --head "$branch" \
+              --title "chore: update OMP to ${LATEST_OMP_VERSION}" \
+              --body "$body" \
+              --draft
+          fi
