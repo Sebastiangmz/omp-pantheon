@@ -51,8 +51,9 @@ Original OMO prompt content and concept:
 (SUL-1.0).
 
 Seshat/Ghola agents, SpecSafe hooks/skills, Honcho durable-memory tooling, and
-Linear/GitHub/docs/memory skills come from the local `pi-seshat` work integrated
-into this bundle.
+Linear/GitHub/docs/memory skills come from
+[pi-seshat](https://github.com/Agentic-Engineering-Agency/pi-seshat), the public
+Seshat the Ghola harness integrated into this bundle.
 
 This is a personal-config-tree port, not a redistribution. If this is ever
 published as an installable package, licensing will be re-evaluated then.

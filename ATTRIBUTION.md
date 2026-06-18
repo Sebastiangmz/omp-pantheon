@@ -16,9 +16,10 @@ and concepts to OMP's native tool grammar.
   underlying tool surface differs.
 - **Seshat / pi-seshat layer:** Ghola agents, SpecSafe discipline, Honcho
   durable-memory bridge, Linear/GitHub/docs/memory skills, lifecycle hooks, and
-  the associated tests/port notes come from the local `pi-seshat` work integrated
-  into this OMP bundle. They are credited separately because they are not part of
-  the OMO prompt lineage.
+  the associated tests/port notes come from
+  [pi-seshat](https://github.com/Agentic-Engineering-Agency/pi-seshat), the
+  public Seshat the Ghola harness integrated into this OMP bundle. They are
+  credited separately because they are not part of the OMO prompt lineage.
 
 ## Grammar mapping (OMO → OMP)
 
