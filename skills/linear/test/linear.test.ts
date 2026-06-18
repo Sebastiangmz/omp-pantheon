@@ -172,7 +172,7 @@ function makeOpts(
 	makePiDir(dir);
 	return {
 		cwd: dir,
-		env: { LINEAR_API_KEY: "lin_api_test123" },
+		env: { LINEAR_API_KEY: "fake-linear-api-key-for-tests" },
 		linearClientFactory: clientFactory
 			? (_key: string) => clientFactory()
 			: (_key: string) => makeMockClient(),

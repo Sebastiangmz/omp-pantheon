@@ -204,7 +204,7 @@ function parseOpt(args: string[], prefix: string): string | undefined {
 // ---------------------------------------------------------------------------
 
 const AUTH_ERROR = `LINEAR_API_KEY not set. Add to ~/.bashrc:
-  export LINEAR_API_KEY="lin_api_..."
+  export LINEAR_API_KEY="<LINEAR_API_KEY>"
 Then: source ~/.bashrc`;
 
 // ---------------------------------------------------------------------------
