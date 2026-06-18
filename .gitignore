@@ -3,6 +3,27 @@ node_modules/
 *.bak.*
 .DS_Store
 
+# Local credentials and runtime artifacts
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cert
+*.sqlite
+*.sqlite3
+*.db
+*.db-*
+*.jsonl
+honcho.json
+credentials.json
+secrets.json
+*-credentials.json
+*-secrets.json
+
 .pi/.honcho-state.json
 .pi/.honcho-state.json.corrupt-*
 .pi/.push-log.jsonl

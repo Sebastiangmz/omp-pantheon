@@ -23,7 +23,7 @@ With `--i-approve`, the mutation executes and one JSON line is appended to `.pi/
 Set `LINEAR_API_KEY` in your environment:
 
 ```bash
-export LINEAR_API_KEY="lin_api_..."
+export LINEAR_API_KEY="<LINEAR_API_KEY>"
 # Add to ~/.bashrc for persistence
 ```
 

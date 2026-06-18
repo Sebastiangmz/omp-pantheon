@@ -1,7 +1,7 @@
 /**
  * Honcho memory bridge — Oh My Pi port of pi-seshat's honcho extension.
  *
- * Source of truth: /home/fr/Code/Misc/pi/.pi/extensions/honcho/index.ts
+ * Source lineage: pi-seshat Honcho extension.
  * SpecSafe slice: SPEC-20260424-001 — pi-honcho-bridge-v1
  * Identity model updated: SPEC-20260426-008.1 — persona-prompt-identity
  *

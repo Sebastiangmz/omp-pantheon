@@ -90,7 +90,7 @@ function baseEnv(
 		GIT_CONFIG_GLOBAL: "/dev/null",
 		GIT_CONFIG_SYSTEM: "/dev/null",
 		HOME: repo,
-		LINEAR_API_KEY: "lin_api_test",
+		LINEAR_API_KEY: "fake-linear-api-key-for-tests",
 		PI_COHERENCE_LINEAR_CMD: writeLinearStub(repo),
 		PI_COHERENCE_LINEAR_LIST_FIXTURE: path.join(
 			LINEAR_FIXTURE_DIR,

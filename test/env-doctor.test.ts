@@ -141,11 +141,11 @@ function defaultDoctorEnv(
 	return {
 		...cleanProcessEnv(),
 		HOME: testEnv.home,
-		HONCHO_API_KEY: "hnc_test_key_ok",
+		HONCHO_API_KEY: "fake-honcho-api-key-for-tests",
 		HONCHO_WORKSPACE_ID: "ws-test",
 		HONCHO_SESSION_ID: "sess-test",
 		HONCHO_PEER_ID: "peer-test",
-		LINEAR_API_KEY: "lin_test_key_ok",
+		LINEAR_API_KEY: "fake-linear-api-key-for-tests",
 		PI_ENVDOCTOR_HONCHO_PROBE_CMD: testEnv.stubs.honcho,
 		PI_ENVDOCTOR_LINEAR_CMD: testEnv.stubs.linear,
 		PI_ENVDOCTOR_GH_CMD: testEnv.stubs.gh,
@@ -360,18 +360,20 @@ describe("[unit] env-doctor CLI", () => {
 
 	test("T-k API key values are redacted from stdout and stderr", () => {
 		const env = createTestEnv({
-			honcho: { exitCode: 1, stderr: "bad key hnc_secrettoken_zzz rejected" },
+			honcho: {
+				exitCode: 1,
+				stderr: "bad key fake-honcho-redaction-secret rejected",
+			},
 		});
 
 		const result = runDoctor(env, [], {
-			HONCHO_API_KEY: "hnc_secrettoken_zzz",
+			HONCHO_API_KEY: "fake-honcho-redaction-secret",
 		});
 		const output = combinedOutput(result);
 
 		expect(result.status).toBe(1);
 		expect(output).toContain("HONCHO_API_KEY: FAIL");
-		expect(output).not.toContain("secrettoken");
-		expect(output).not.toContain("hnc_secrettoken_zzz");
+		expect(output).not.toContain("fake-honcho-redaction-secret");
 	});
 
 	test("T-l unknown CLI flag exits 2", () => {

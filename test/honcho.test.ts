@@ -1,7 +1,7 @@
 /**
  * Tests for the OMP-ported honcho custom tool.
  *
- * Source: /home/fr/Code/Misc/pi/.pi/extensions/honcho/test/honcho.test.ts
+ * Source lineage: pi-seshat Honcho extension test suite.
  * SpecSafe slice: SPEC-20260424-001 — pi-honcho-bridge-v1
  *
  * Test types:
@@ -59,7 +59,7 @@ describe("[unit] isConclusionWriter", () => {
 
 describe("[unit] sanitizeErrorForDisplay", () => {
 	test("strips HONCHO_API_KEY when embedded in error message", () => {
-		const apiKey = "hch-v3-deadbeef1234567890feedface";
+		const apiKey = "fake-honcho-api-key-for-redaction-test";
 		const raw = `Error calling Honcho: unauthorized (apiKey=${apiKey}) at line 42`;
 		const clean = sanitizeErrorForDisplay(raw, apiKey);
 		expect(clean).not.toContain(apiKey);
@@ -68,7 +68,7 @@ describe("[unit] sanitizeErrorForDisplay", () => {
 
 	test("is a no-op when no apiKey is provided or key absent from text", () => {
 		expect(sanitizeErrorForDisplay("plain error", "")).toBe("plain error");
-		expect(sanitizeErrorForDisplay("plain error", "hch-v3-abc")).toBe(
+		expect(sanitizeErrorForDisplay("plain error", "fake-honcho-api-key")).toBe(
 			"plain error",
 		);
 	});
