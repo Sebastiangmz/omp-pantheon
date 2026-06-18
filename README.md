@@ -13,7 +13,11 @@ that doesn't stop until the work is done.
 > This is a **personal-config-tree port**, not a redistribution of any upstream
 > harness. Prompt content and concepts derived from
 > [oh-my-openagent (OMO)](https://github.com/code-yeongyu/oh-my-openagent)
-> (SUL-1.0) are adapted to OMP's tool grammar. See [ATTRIBUTION.md](./ATTRIBUTION.md).
+> (SUL-1.0) are adapted to OMP's tool grammar. The Seshat/Ghola, SpecSafe,
+> Honcho, Linear/GitHub/docs/memory, and discipline-hook layer is credited to
+> [pi-seshat](https://github.com/Agentic-Engineering-Agency/pi-seshat), the
+> public Seshat the Ghola harness integrated into this bundle. See
+> [ATTRIBUTION.md](./ATTRIBUTION.md).
 
 ## What you get
 

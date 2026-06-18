@@ -44,12 +44,16 @@ oh-my-openagent-inspired Pantheon layer, then folds in the local Seshat stack so
 `/remove-ai-slops`, `/omomomo`, plus extension commands `/ralph-loop`,
 `/ulw-loop`, `/cancel-ralph`, and `/stop-continuation`.
 
-## Who made the upstream idea?
+## Who made this lineage?
 
 Original OMO concept and prompt lineage: **[code-yeongyu](https://github.com/code-yeongyu)**'s
 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent).
 
 OMP runtime: [oh-my-pi](https://github.com/can1357/oh-my-pi).
+
+Seshat/Ghola agents, SpecSafe discipline, Honcho durable memory, Linear/GitHub/docs/memory skills,
+and lifecycle hooks: [pi-seshat](https://github.com/Agentic-Engineering-Agency/pi-seshat),
+the public Seshat the Ghola harness integrated into this bundle.
 
 Integrated Pantheon + Seshat + Honcho + SpecSafe bundle: this repository,
 installed into your OMP agent tree.

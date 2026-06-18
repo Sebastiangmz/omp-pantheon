@@ -9,11 +9,17 @@ and concepts to OMP's native tool grammar.
 - **Engine:** [oh-my-pi (OMP)](https://github.com/can1357/oh-my-pi) — MIT. The
   underlying coding agent. This repo only ships config (agents/commands/skills/hooks)
   discovered by OMP; no OMP source is vendored.
-- **Agents, skills, commands, loop, hooks:** concepts and prompt content derived
-  from [oh-my-openagent (OMO)](https://github.com/code-yeongyu/oh-my-openagent),
+- **Pantheon / OMO layer:** agents, skills, commands, loop, and hook concepts
+  derived from [oh-my-openagent (OMO)](https://github.com/code-yeongyu/oh-my-openagent),
   licensed **SUL-1.0**. Original author: [@code-yeongyu](https://github.com/code-yeongyu).
   Content here is adapted (re-grammared) for OMP, not copied verbatim where the
   underlying tool surface differs.
+- **Seshat / pi-seshat layer:** Ghola agents, SpecSafe discipline, Honcho
+  durable-memory bridge, Linear/GitHub/docs/memory skills, lifecycle hooks, and
+  the associated tests/port notes come from
+  [pi-seshat](https://github.com/Agentic-Engineering-Agency/pi-seshat), the
+  public Seshat the Ghola harness integrated into this OMP bundle. They are
+  credited separately because they are not part of the OMO prompt lineage.
 
 ## Grammar mapping (OMO → OMP)
 
