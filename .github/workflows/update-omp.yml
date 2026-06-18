@@ -58,7 +58,11 @@ jobs:
           }
           NODE
 
-      - name: Install dependencies
+      - name: Install root dependencies
+        run: bun install
+
+      - name: Install extension dependencies
+        working-directory: extensions/oh-my-omp
         run: bun install
 
       - name: Stop if no update
