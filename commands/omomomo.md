@@ -9,43 +9,54 @@ Print the following message to the user EXACTLY as written (in a friendly, celeb
 
 ---
 
-# 🎉 oMoMoMoMoMo···
+# 🎉 oMp-Pantheon: OMP + Pantheon + Seshat + Honcho
 
-**You found the easter egg!** 🥚✨
+**You found the integrated harness easter egg.** 🥚✨
 
-## What is Oh My OpenAgent?
+## What is omp-pantheon now?
 
-**Oh My OpenAgent** is a powerful plugin that transforms your AI agent into a full development team:
+**omp-pantheon** is Sebastián's source-of-truth OMP bundle. It keeps the
+oh-my-openagent-inspired Pantheon layer, then folds in the local Seshat stack so
+`omp` boots as a full agentic engineering cockpit:
 
-- 🤖 **Multi-Agent Orchestration**: Oracle, Librarian, Explore, and more
-- 🔧 **LSP Tools**: Full IDE capabilities for your agents — hover, goto definition, find references, rename, code actions
-- 🔍 **AST-Grep**: Structural code search and replace across 25 languages
-- 📚 **Built-in Skills**: Context7 for docs, web search for research, code search for GitHub
-- 🔄 **Background Agents**: Run multiple agents in parallel like a real dev team
-- 🎯 **Harness Compatibility**: Your existing config just works
+- **Upstream OMP runtime**: providers, built-in tools, LSP/DAP, `explore`,
+  `plan`, `task`, `reviewer`, `designer`, `librarian`, and the native harness
+  primitives.
+- **Pantheon orchestration**: `sisyphus`, `hephaestus`, `oracle`, `atlas`,
+  `prometheus`, and `metis` for planning, delegation, architecture review, and
+  deep autonomous work.
+- **Seshat Gholas**: `steward`, `spec-writer`, `implementer`, `test-writer`,
+  `validator`, `reviewer`, `reviewer-kimi`, and `doc-scout` for product/spec,
+  implementation, testing, validation, review, and current-doc synthesis.
+- **SpecSafe discipline**: `bootstrap`, `coherence`, `docs`, `env-doctor`,
+  `github`, `latest-docs`, `linear`, `memory`, `push`, and `specsafe` skills,
+  plus slice/session hooks.
+- **Honcho durable memory**: `honcho_remember`, `honcho_search`,
+  `honcho_recall`, and `honcho_conclude`, registered through the OMP extension
+  so they are real CLI tools.
+- **Loop runtime and guardrails**: Ralph/ULW continuation commands, todo
+  enforcement, intent gate, comment checker, `i-approve`, fallback audit, and
+  SpecSafe subagent/session hooks.
 
-## What is oh-my-omp?
+## Commands in the bundle
 
-**oh-my-omp** is a port of [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (OMO) — by [code-yeongyu](https://github.com/code-yeongyu) — onto the [oh-my-pi](https://github.com/can1357/oh-my-pi) (OMP) coding harness.
+`/ulw`, `/ultrawork`, `/init-deep`, `/refactor`, `/handoff`, `/start-work`,
+`/remove-ai-slops`, `/omomomo`, plus extension commands `/ralph-loop`,
+`/ulw-loop`, `/cancel-ralph`, and `/stop-continuation`.
 
-It transforms `omp` into a full development team by adding:
+## Who made the upstream idea?
 
-- 🤖 **Multi-agent orchestration**: Sisyphus, Hephaestus, Oracle, Atlas, Prometheus, Metis on top of OMP's own `explore`, `plan`, `librarian`, `task`, `quick_task`, `reviewer`, `designer`.
-- 🔧 **Discipline commands**: `/ulw`, `/ultrawork`, `/init-deep`, `/refactor`, `/handoff`, `/start-work`, `/remove-ai-slops`, `/omomomo`.
-- 📚 **Curated skill bundles**: `ai-slop-remover`, `dev-browser`, `frontend-ui-ux`, `git-master`, `playwright`, `playwright-cli`, `review-work`, `hyperplan`, `security-research`, `tech-debt-audit`, `remove-deadcode`.
+Original OMO concept and prompt lineage: **[code-yeongyu](https://github.com/code-yeongyu)**'s
+[oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent).
 
-## Who Made This?
+OMP runtime: [oh-my-pi](https://github.com/can1357/oh-my-pi).
 
-Created with ❤️ by **[code-yeongyu](https://github.com/code-yeongyu)**
-
-🔗 **GitHub**: https://github.com/code-yeongyu/oh-my-openagent
-
-Original concept and prompts: **code-yeongyu**'s **oh-my-openagent**.
-Port to oh-my-pi: this `~/.omp/agent/extensions/oh-my-omp/` extension.
+Integrated Pantheon + Seshat + Honcho + SpecSafe bundle:
+`/Users/sebastian/.omp/omp-pantheon`.
 
 ---
 
-*Enjoy coding on steroids!* 🚀
+*Enjoy the full Pantheon.* 🚀
 
 </command-instruction>
 
