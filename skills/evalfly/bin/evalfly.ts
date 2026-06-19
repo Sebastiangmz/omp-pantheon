@@ -5,9 +5,13 @@ import {
 	EVAL_RUN_SCHEMA_VERSION,
 	type EvalCase,
 	type EvalConfig,
+	type EvalRun,
 	type EvalSuite,
 	validateEvalConfig,
+	validateEvalRun,
 } from "./schema.ts";
+
+const RUN_ID_TOKEN_RE = /^[A-Za-z0-9._-]+$/;
 
 export type DispatchOptions = {
 	cwd?: string;
@@ -31,21 +35,7 @@ type CaseResult = {
 	errors: string[];
 };
 
-type RunRecord = {
-	schema_version: typeof EVAL_RUN_SCHEMA_VERSION;
-	run_id: string;
-	suite: EvalSuite;
-	config_name: string;
-	created_at: string;
-	results: CaseResult[];
-	summary: {
-		total: number;
-		passed: number;
-		failed: number;
-		critical_regressions: number;
-	};
-	verdict: "pass" | "fail";
-};
+type RunRecord = EvalRun;
 
 export async function dispatch(
 	args: string[],
@@ -91,8 +81,12 @@ async function runCommand(
 	const suite = parseSuite(args);
 	const config = await loadConfig(cwd);
 	const cases = config.cases.filter((testCase) => testCase.suite === suite);
+	if (cases.length === 0) {
+		throw new Error(`no cases selected for suite: ${suite}`);
+	}
 	const createdAt = (opts.now?.() ?? new Date()).toISOString();
 	const runId = opts.runId ?? defaultRunId(suite, createdAt);
+	assertSafeRunId(runId);
 	const results = await Promise.all(
 		cases.map((testCase) => evaluateCase(cwd, testCase)),
 	);
@@ -134,9 +128,17 @@ async function reportCommand(
 	if (!runId) {
 		return { exitCode: 1, stdout: "", stderr: "report requires a run id\n" };
 	}
-	const runPath = join(cwd, "evals", "runs", `${runId}.json`);
-	const run = JSON.parse(await readFile(runPath, "utf8")) as RunRecord;
-	await writeReport(cwd, run);
+	assertSafeRunId(runId);
+	const runPath = await artifactPath(cwd, ["evals", "runs"], runId, ".json");
+	const parsed = JSON.parse(await readFile(runPath, "utf8"));
+	const result = validateEvalRun(parsed);
+	if (!result.ok) {
+		throw new Error(
+			`invalid ${join("evals", "runs", `${runId}.json`)}:\n${result.errors.join("\n")}`,
+		);
+	}
+	assertSafeRunId(result.value.run_id);
+	await writeReport(cwd, result.value);
 	return {
 		exitCode: 0,
 		stdout: `evalfly report written: ${join("evals", "reports", `${runId}.md`)}\n`,
@@ -302,7 +304,7 @@ async function writeRun(cwd: string, run: RunRecord): Promise<void> {
 	const runsDir = join(cwd, "evals", "runs");
 	await mkdir(runsDir, { recursive: true });
 	await writeFile(
-		join(runsDir, `${run.run_id}.json`),
+		await artifactPath(cwd, ["evals", "runs"], run.run_id, ".json"),
 		`${JSON.stringify(run, null, 2)}\n`,
 	);
 }
@@ -310,7 +312,10 @@ async function writeRun(cwd: string, run: RunRecord): Promise<void> {
 async function writeReport(cwd: string, run: RunRecord): Promise<void> {
 	const reportsDir = join(cwd, "evals", "reports");
 	await mkdir(reportsDir, { recursive: true });
-	await writeFile(join(reportsDir, `${run.run_id}.md`), renderReport(run));
+	await writeFile(
+		await artifactPath(cwd, ["evals", "reports"], run.run_id, ".md"),
+		renderReport(run),
+	);
 }
 
 function renderReport(run: RunRecord): string {
@@ -335,6 +340,53 @@ function renderReport(run: RunRecord): string {
 		);
 	}
 	return `${lines.join("\n")}\n`;
+}
+
+function assertSafeRunId(runId: string): void {
+	if (!RUN_ID_TOKEN_RE.test(runId)) {
+		throw new Error(`unsafe run id: ${runId}`);
+	}
+}
+
+async function artifactPath(
+	cwd: string,
+	artifactDirParts: [string, string],
+	runId: string,
+	extension: ".json" | ".md",
+): Promise<string> {
+	assertSafeRunId(runId);
+	const artifactDir = join(cwd, ...artifactDirParts);
+	const realCwd = await realpath(cwd);
+	const realArtifactDir = await realpath(artifactDir);
+	const realArtifactDirRelativePath = relative(realCwd, realArtifactDir);
+	if (
+		realArtifactDirRelativePath === "" ||
+		realArtifactDirRelativePath === ".." ||
+		realArtifactDirRelativePath.startsWith(`..${sep}`) ||
+		isAbsolute(realArtifactDirRelativePath)
+	) {
+		throw new Error(
+			`unsafe artifact directory: ${join(...artifactDirParts)} (artifact directory must stay within cwd)`,
+		);
+	}
+	const expectedArtifactDir = resolve(realCwd, ...artifactDirParts);
+	if (realArtifactDir !== expectedArtifactDir) {
+		throw new Error(
+			`unsafe artifact directory: ${join(...artifactDirParts)} (artifact directory must be ${join(...artifactDirParts)})`,
+		);
+	}
+
+	const targetPath = resolve(realArtifactDir, `${runId}${extension}`);
+	const relativePath = relative(realArtifactDir, targetPath);
+	if (
+		relativePath === "" ||
+		relativePath === ".." ||
+		relativePath.startsWith(`..${sep}`) ||
+		isAbsolute(relativePath)
+	) {
+		throw new Error(`unsafe run id: ${runId}`);
+	}
+	return targetPath;
 }
 
 function defaultRunId(suite: EvalSuite, createdAt: string): string {

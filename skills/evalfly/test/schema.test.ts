@@ -58,6 +58,13 @@ describe("evalfly schema validation", () => {
 			"evalfly.run.v1",
 		);
 		expect(EvalCaseSchema.required).toContain("privacy");
+		expect(EvalConfigSchema.properties.cases.minItems).toBe(1);
+		expect(
+			EvalCaseSchema.properties.expected.properties.success_criteria.minItems,
+		).toBe(1);
+		expect(
+			EvalCaseSchema.properties.judge.anyOf[0].properties.assertions.minItems,
+		).toBe(1);
 	});
 
 	test("valid config and case pass", () => {
@@ -66,6 +73,120 @@ describe("evalfly schema validation", () => {
 			ok: true,
 			value: validConfig,
 		});
+	});
+
+	test("config rejects empty cases to match schema minItems", () => {
+		const result = validateEvalConfig({ ...validConfig, cases: [] });
+
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.errors.join("\n")).toContain(
+				"cases must contain at least one case",
+			);
+		}
+	});
+
+	test("case rejects empty success criteria to match schema minItems", () => {
+		const result = validateEvalCase({
+			...validCase,
+			expected: { success_criteria: [] },
+		});
+
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.errors.join("\n")).toContain(
+				"expected.success_criteria must contain at least one criterion",
+			);
+		}
+	});
+
+	test("deterministic judge rejects empty assertions to match schema minItems", () => {
+		const result = validateEvalCase({
+			...validCase,
+			judge: { type: "deterministic", assertions: [] },
+		});
+
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.errors.join("\n")).toContain(
+				"judge.assertions must contain at least one assertion",
+			);
+		}
+	});
+
+	test("runtime validators reject unknown properties where schemas disallow them", () => {
+		const configResult = validateEvalConfig({ ...validConfig, extra: true });
+		const caseResult = validateEvalCase({
+			...validCase,
+			unexpected: true,
+			privacy: { ...validCase.privacy, extra: true },
+			expected: { ...validCase.expected, extra: true },
+			judge: {
+				type: "deterministic",
+				extra: true,
+				assertions: [
+					{
+						type: "file_exists",
+						path: "reports/evalfly/summary.md",
+						extra: true,
+					},
+				],
+			},
+		});
+		const runResult = validateEvalRun({
+			schema_version: "evalfly.run.v1",
+			run_id: "run-unknown-fields",
+			suite: "smoke",
+			config_name: validConfig.name,
+			created_at: "2026-06-19T00:00:00.000Z",
+			extra: true,
+			results: [
+				{
+					case_id: validCase.case_id,
+					title: validCase.title,
+					risk_tier: "critical",
+					critical: true,
+					passed: true,
+					privacy: { ...validCase.privacy, extra: true },
+					errors: [],
+					extra: true,
+				},
+			],
+			summary: {
+				total: 1,
+				passed: 1,
+				failed: 0,
+				critical_regressions: 0,
+				extra: true,
+			},
+			verdict: "pass",
+		});
+
+		expect(configResult.ok).toBe(false);
+		expect(caseResult.ok).toBe(false);
+		expect(runResult.ok).toBe(false);
+		if (!configResult.ok) {
+			expect(configResult.errors.join("\n")).toContain(
+				"unexpected property: extra",
+			);
+		}
+		if (!caseResult.ok) {
+			const errors = caseResult.errors.join("\n");
+			expect(errors).toContain("unexpected property: unexpected");
+			expect(errors).toContain("privacy unexpected property: extra");
+			expect(errors).toContain("expected unexpected property: extra");
+			expect(errors).toContain("judge unexpected property: extra");
+			expect(errors).toContain(
+				"judge.assertions[0] unexpected property: extra",
+			);
+		}
+		if (!runResult.ok) {
+			const errors = runResult.errors.join("\n");
+			expect(errors).toContain("unexpected property: extra");
+			expect(errors).toContain("results[0] unexpected property: extra");
+			expect(errors).toContain("results[0].privacy unexpected property: extra");
+			expect(errors).toContain("summary unexpected property: extra");
+		}
 	});
 
 	test("missing privacy metadata fails with field path", () => {
