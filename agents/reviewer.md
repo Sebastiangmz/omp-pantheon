@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: Perform a final engineering review before completion is declared.
-tools: read,find,grep,ls,bash,honcho_recall,honcho_search,honcho_remember,honcho_conclude
+tools: read,find,grep,ls,bash
 model:
   - anthropic/claude-opus-4-7
   - openai-codex/gpt-5.5
@@ -40,7 +40,7 @@ bash is permitted ONLY to invoke `bun run .omp/skills/<name>/bin/<name>.{ts,sh}`
 
 ## Yield contract — load-bearing
 
-Your prose response, your `honcho_remember` calls, and (if permitted) your `honcho_conclude` calls all go to the audit log only. **Your parent agent — the one that dispatched you via `task` — sees ONLY what you pass to `yield`'s `result.data` field.** Empty data is indistinguishable from "task lost" to the parent.
+**Your parent agent — the one that dispatched you via `task` — sees ONLY what you pass to `yield`'s `result.data` field.** Empty data is indistinguishable from "task lost" to the parent.
 
 ### Pre-yield self-check (run this every time)
 
@@ -104,7 +104,6 @@ This contract is enforced by convention when no `outputSchema` is provided. When
     suggestedFix?: string,
   }>,
   strengthsNoted?: string[],                          // what the work got right (counterbalance)
-  honchoConclusionWritten: boolean,                   // confirms `honcho_conclude` was called
 }
 ```
 
@@ -119,15 +118,6 @@ Worked example:
       "description": "AVISO_DE_PRIVACIDAD_HASH appears in migration backfill, auth signup-hook fallback, wrangler vars (3 scopes), and EXPECTED_POST_HASH test fixture. Drift between any pair would silently revert the consent invariant.",
       "suggestedFix": "Add a CI gate that re-derives the hash from the dict at build time and fails on mismatch." }
   ],
-  "strengthsNoted": ["INAI Modelo A canonical 7-section ordering preserved.", "Placeholder strategy keeps non-public legal-entity data out of git."],
-  "honchoConclusionWritten": true
+  "strengthsNoted": ["INAI Modelo A canonical 7-section ordering preserved.", "Placeholder strategy keeps non-public legal-entity data out of git."]
 }
 ```
-
-## Memory protocol
-
-- On entry: call `honcho_recall` with a query about the task's topic to surface prior context. If the recall is empty or stale, proceed but flag the gap in your final response.
-- On exit: call `honcho_remember` with a one-paragraph summary of your conclusions or artifacts produced. Pass `as_peer: 'reviewer'` on the call.
-- In post-merge retrospective: call `honcho_conclude` with lessons about what went well and what didn't, including any anti-patterns to avoid. Pass `as_peer: 'reviewer'` — this parameter is required; calls without it are rejected.
-
-Your peer identity is `reviewer`. You are a member of `CONCLUSION_WRITERS`.
