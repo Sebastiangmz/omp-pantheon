@@ -1,10 +1,18 @@
-import { access, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import {
+	access,
+	lstat,
+	mkdir,
+	readFile,
+	realpath,
+	writeFile,
+} from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import {
 	EVAL_RUN_SCHEMA_VERSION,
 	type EvalCase,
 	type EvalConfig,
+	type EvalRun,
 	type EvalRunContext,
 	type EvalSuite,
 	validateEvalConfig,
@@ -12,6 +20,7 @@ import {
 } from "./schema.ts";
 
 const RUN_ID_TOKEN_RE = /^[A-Za-z0-9._-]+$/;
+const CONTEXT_VALUE_MAX_LENGTH = 512;
 
 export type DispatchOptions = {
 	cwd?: string;
@@ -216,6 +225,29 @@ function parseOptionalFlag(args: string[], flag: string): string | undefined {
 	if (!value || value.startsWith("--")) {
 		throw new Error(`${flag} requires a value`);
 	}
+	assertContextLine(flag, value);
+	return value;
+}
+function assertContextLine(label: string, value: string): void {
+	if (
+		value.length > CONTEXT_VALUE_MAX_LENGTH ||
+		/[\u0000-\u001f\u007f]/.test(value)
+	) {
+		throw new Error(`${label} must be a single line`);
+	}
+}
+
+function safeContextLine(value: unknown): string | undefined {
+	if (typeof value !== "string") {
+		return undefined;
+	}
+	if (
+		value.length === 0 ||
+		value.length > CONTEXT_VALUE_MAX_LENGTH ||
+		/[\u0000-\u001f\u007f]/.test(value)
+	) {
+		return undefined;
+	}
 	return value;
 }
 
@@ -237,9 +269,16 @@ async function readCurrentSpecSafeSlice(
 	cwd: string,
 ): Promise<{ id?: string; sessionId?: string } | undefined> {
 	try {
-		const parsed = JSON.parse(
-			await readFile(join(cwd, ".pi", ".specsafe-state.json"), "utf8"),
-		);
+		const statePath = join(cwd, ".pi", ".specsafe-state.json");
+		const realCwd = await realpath(cwd);
+		const expectedStatePath = resolve(realCwd, ".pi", ".specsafe-state.json");
+		if ((await lstat(statePath)).isSymbolicLink()) {
+			return undefined;
+		}
+		if ((await realpath(statePath)) !== expectedStatePath) {
+			return undefined;
+		}
+		const parsed = JSON.parse(await readFile(statePath, "utf8"));
 		const slice =
 			typeof parsed === "object" && parsed !== null
 				? (parsed as { currentSlice?: unknown }).currentSlice
@@ -247,18 +286,18 @@ async function readCurrentSpecSafeSlice(
 		if (typeof slice !== "object" || slice === null) {
 			return undefined;
 		}
+		const record = slice as { id?: unknown; sessionId?: unknown };
 		return {
-			id:
-				typeof (slice as { id?: unknown }).id === "string"
-					? (slice as { id: string }).id
-					: undefined,
-			sessionId:
-				typeof (slice as { sessionId?: unknown }).sessionId === "string"
-					? (slice as { sessionId: string }).sessionId
-					: undefined,
+			id: safeContextLine(record.id),
+			sessionId: safeContextLine(record.sessionId),
 		};
-	} catch {
-		return undefined;
+	} catch (error) {
+		if (missingPathError(error)) {
+			return undefined;
+		}
+		throw new Error(
+			`failed to read .pi/.specsafe-state.json: ${error instanceof Error ? error.message : String(error)}`,
+		);
 	}
 }
 

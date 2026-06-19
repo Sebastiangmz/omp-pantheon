@@ -210,6 +210,89 @@ describe("evalfly CLI", () => {
 		);
 	});
 
+	test("run ignores a SpecSafe state symlink outside cwd", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, ".pi"), { recursive: true });
+		await writeFile(join(cwd, "expected.txt"), "ok");
+		const outsideDir = await mkdtemp(
+			join(tmpdir(), "evalfly-specsafe-outside-"),
+		);
+		await writeFile(
+			join(outsideDir, "state.json"),
+			JSON.stringify({
+				currentSlice: {
+					id: "SPEC-OUTSIDE",
+					sessionId: "sess-outside",
+				},
+				history: [],
+			}),
+		);
+		await symlink(
+			join(outsideDir, "state.json"),
+			join(cwd, ".pi", ".specsafe-state.json"),
+		);
+
+		const result = await dispatch(
+			["run", "--suite", "smoke", "--commit-range", "main..HEAD"],
+			{
+				cwd,
+				now: () => new Date("2026-06-19T12:00:00.000Z"),
+				runId: "run-specsafe-symlink",
+			},
+		);
+
+		expect(result.exitCode).toBe(0);
+		const run = JSON.parse(
+			await readFile(
+				join(cwd, "evals", "runs", "run-specsafe-symlink.json"),
+				"utf8",
+			),
+		);
+		expect(run.context).toEqual({
+			commit_range: "main..HEAD",
+			eval_report_path: "evals/reports/run-specsafe-symlink.md",
+		});
+	});
+
+	test("run fails clearly when SpecSafe state exists but is malformed", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, ".pi"), { recursive: true });
+		await writeFile(join(cwd, "expected.txt"), "ok");
+		await writeFile(join(cwd, ".pi", ".specsafe-state.json"), "{not json");
+
+		const result = await dispatch(["run", "--suite", "smoke"], {
+			cwd,
+			now: () => new Date("2026-06-19T12:00:00.000Z"),
+			runId: "run-malformed-specsafe",
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("failed to read .pi/.specsafe-state.json");
+		await expect(
+			readFile(join(cwd, "evals", "runs", "run-malformed-specsafe.json")),
+		).rejects.toThrow();
+	});
+
+	test("run rejects control characters in commit range before writing artifacts", async () => {
+		const cwd = await makeProject();
+		await writeFile(join(cwd, "expected.txt"), "ok");
+
+		const result = await dispatch(
+			["run", "--suite", "smoke", "--commit-range", "main..HEAD\nInjected"],
+			{
+				cwd,
+				now: () => new Date("2026-06-19T12:00:00.000Z"),
+				runId: "run-bad-commit-range",
+			},
+		);
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("--commit-range must be a single line");
+		await expect(
+			readFile(join(cwd, "evals", "runs", "run-bad-commit-range.json")),
+		).rejects.toThrow();
+	});
+
 	test("run rejects --commit-range without a value before writing artifacts", async () => {
 		const cwd = await makeProject();
 		await writeFile(join(cwd, "expected.txt"), "ok");
