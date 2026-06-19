@@ -52,7 +52,7 @@ Prints the cached documentation for `<lib>`. If no cache file exists, performs a
 If the cache is older than the entry's TTL, the first line of output is a stale warning:
 
 ```
-[stale 9.2 days; ttl 7; refresh with: latest-docs fetch @honcho-ai/sdk --refresh]
+[stale 9.2 days; ttl 7; refresh with: latest-docs fetch @linear/sdk --refresh]
 ```
 
 `--section=<header>` grep-matches a Markdown header by substring (case-insensitive) and prints the matched header plus everything under it, stopping at the next heading of the same or higher level. If no matching header is found, exits non-zero.
@@ -93,14 +93,14 @@ Flags:
 
 ```
 .omp/.docs-cache/
-  @honcho-ai-sdk/
+  @linear-sdk/
     2026-04-24.md
     2026-05-01.md    # re-fetched after expiry
   hono/
     2026-04-24.md
 ```
 
-Library names are sanitized for use as directory names: forward slashes are replaced with hyphens. `@honcho-ai/sdk` becomes `@honcho-ai-sdk`. The `@` prefix is preserved.
+Library names are sanitized for use as directory names: forward slashes are replaced with hyphens. `@linear/sdk` becomes `@linear-sdk`. The `@` prefix is preserved.
 
 Each cache file is named `<YYYY-MM-DD>.md` (the date at fetch time). The skill retains old dated files — it does not delete them. `show` and `list` always use the most recent one.
 
@@ -110,7 +110,7 @@ Every cache file begins with a YAML block:
 
 ```yaml
 ---
-source_url: https://raw.githubusercontent.com/plastic-labs/honcho/main/sdks/typescript/README.md
+source_url: https://raw.githubusercontent.com/linear/linear/master/packages/sdk/README.md
 fetched_at: 2026-04-24T12:00:00.000Z
 content_hash: a3f7c8d1e4b290ab
 ---
@@ -130,7 +130,7 @@ Staleness is evaluated against the entry's effective TTL, resolved in this order
 
 ## Registry schema
 
-`registry.json` is a plain JSON object. Keys are library names (e.g., `@honcho-ai/sdk`). The special key `_meta` holds registry-wide settings.
+`registry.json` is a plain JSON object. Keys are library names (e.g., `@linear/sdk`). The special key `_meta` holds registry-wide settings.
 
 ### Entry fields
 
@@ -152,8 +152,8 @@ Staleness is evaluated against the entry's effective TTL, resolved in this order
 ### Example entry
 
 ```json
-"@honcho-ai/sdk": {
-  "url": "https://raw.githubusercontent.com/plastic-labs/honcho/main/sdks/typescript/README.md",
+"@linear/sdk": {
+  "url": "https://raw.githubusercontent.com/linear/linear/master/packages/sdk/README.md",
   "type": "markdown",
   "ttl_days": 7,
   "verified": false
@@ -185,10 +185,10 @@ For updates (`action: "update"`), `before` is the prior registry entry. The log 
 bun run .omp/skills/latest-docs/bin/latest-docs.ts list
 
 # Fetch (cache-aware — skips network if fresh)
-bun run .omp/skills/latest-docs/bin/latest-docs.ts fetch @honcho-ai/sdk
+bun run .omp/skills/latest-docs/bin/latest-docs.ts fetch @linear/sdk
 
 # Force re-fetch regardless of TTL
-bun run .omp/skills/latest-docs/bin/latest-docs.ts fetch @honcho-ai/sdk --refresh
+bun run .omp/skills/latest-docs/bin/latest-docs.ts fetch @linear/sdk --refresh
 
 # Print full cached docs
 bun run .omp/skills/latest-docs/bin/latest-docs.ts show hono

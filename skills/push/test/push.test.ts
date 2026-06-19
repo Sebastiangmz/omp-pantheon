@@ -323,8 +323,8 @@ describe("[unit] AC4 — mid-slice: currentSlice != null is rejected", () => {
 		pushBaseline(env.repo, "feat/ac4");
 		makeCommit(env.repo, "feat: ahead", "Spec-Slice: SPEC-003");
 
-		// Write honcho-state.json with open slice
-		const stateFile = path.join(env.repo, ".pi", ".honcho-state.json");
+		// Write specsafe-state.json with open slice
+		const stateFile = path.join(env.repo, ".pi", ".specsafe-state.json");
 		fs.writeFileSync(
 			stateFile,
 			JSON.stringify({
@@ -342,7 +342,7 @@ describe("[unit] AC4 — mid-slice: currentSlice != null is rejected", () => {
 		);
 	});
 
-	test("missing honcho-state.json is treated as no open slice (passes check)", async () => {
+	test("missing specsafe-state.json is treated as no open slice (passes check)", async () => {
 		makeCommit(env.repo, "chore: initial commit");
 		pushBaseline(env.repo, "main");
 
@@ -351,12 +351,12 @@ describe("[unit] AC4 — mid-slice: currentSlice != null is rejected", () => {
 		pushBaseline(env.repo, "feat/no-state");
 		makeCommit(env.repo, "feat: ahead", "Spec-Slice: SPEC-003");
 
-		// No honcho-state.json — must pass
+		// No specsafe-state.json — must pass
 		const result = await run(["--i-approve"], env.repo);
 		expect(result.exitCode).toBe(0);
 	});
 
-	test("honcho-state.json with currentSlice=null passes check", async () => {
+	test("specsafe-state.json with currentSlice=null passes check", async () => {
 		makeCommit(env.repo, "chore: initial commit");
 		pushBaseline(env.repo, "main");
 
@@ -365,7 +365,7 @@ describe("[unit] AC4 — mid-slice: currentSlice != null is rejected", () => {
 		pushBaseline(env.repo, "feat/null-state");
 		makeCommit(env.repo, "feat: ahead", "Spec-Slice: SPEC-003");
 
-		const stateFile = path.join(env.repo, ".pi", ".honcho-state.json");
+		const stateFile = path.join(env.repo, ".pi", ".specsafe-state.json");
 		fs.writeFileSync(
 			stateFile,
 			JSON.stringify({ currentSlice: null, history: [] }),

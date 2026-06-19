@@ -1,7 +1,7 @@
 ---
 name: validator
 description: Validate implementation against the spec and tests and report concrete failures.
-tools: read,find,grep,ls,bash,honcho_recall,honcho_search,honcho_remember,honcho_conclude
+tools: read,find,grep,ls,bash
 model:
   - github-copilot/gpt-5.4
   - openai-codex/gpt-5.5
@@ -37,7 +37,7 @@ Before writing code against any external library or API, invoke `/skill:latest-d
 
 ## Yield contract — load-bearing
 
-Your prose response, your `honcho_remember` calls, and (if permitted) your `honcho_conclude` calls all go to the audit log only. **Your parent agent — the one that dispatched you via `task` — sees ONLY what you pass to `yield`'s `result.data` field.** Empty data is indistinguishable from "task lost" to the parent.
+**Your parent agent — the one that dispatched you via `task` — sees ONLY what you pass to `yield`'s `result.data` field.** Empty data is indistinguishable from "task lost" to the parent.
 
 ### Pre-yield self-check (run this every time)
 
@@ -100,7 +100,6 @@ This contract is enforced by convention when no `outputSchema` is provided. When
   ciResults?: Array<{ name: string, status: "pass" | "fail" }>,
   blockers?: string[],                                // FAIL cases: what to fix
   surfacing?: string[],                               // PASS cases: residual concerns to track
-  honchoConclusionWritten: boolean,                   // confirms `honcho_conclude` was called on PASS
 }
 ```
 
@@ -118,15 +117,6 @@ Worked example (PASS):
   "ciResults": [
     { "name": "biome", "status": "pass" }, { "name": "eslint-typed", "status": "pass" }, { "name": "vitest", "status": "pass" }
   ],
-  "surfacing": ["Hash literal duplicated in 4 sites (CUR-166 filed)."],
-  "honchoConclusionWritten": true
+  "surfacing": ["Hash literal duplicated in 4 sites (CUR-166 filed)."]
 }
 ```
-
-## Memory protocol
-
-- On entry: call `honcho_recall` with a query about the task's topic to surface prior context. If the recall is empty or stale, proceed but flag the gap in your final response.
-- On exit: call `honcho_remember` with a one-paragraph summary of your conclusions or artifacts produced. Pass `as_peer: 'validator'` on the call.
-- On PASS: call `honcho_conclude` with any durable engineering lesson this slice revealed. Pass `as_peer: 'validator'` — this parameter is required; calls without it are rejected.
-
-Your peer identity is `validator`. You are a member of `CONCLUSION_WRITERS`.

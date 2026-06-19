@@ -4,13 +4,12 @@
  *
  * SpecSafe slice: SPEC-20260427-012 — env-doctor-skill
  *
- * Eight checklist items (a-h) run in fixed order; none mutate state.
+ * Five checklist items (a-e) run in fixed order; none mutate state.
  *
  * Usage:
  *   bun run .omp/skills/env-doctor/bin/env-doctor.ts [--strict] [--json]
  *
  * Test seams (env vars):
- *   PI_ENVDOCTOR_HONCHO_PROBE_CMD  replaces the Honcho SDK round-trip.
  *   PI_ENVDOCTOR_LINEAR_CMD        replaces `linear list --limit=1`.
  *   PI_ENVDOCTOR_GH_CMD            replaces `gh auth status`.
  *   PI_ENVDOCTOR_OMP_CMD           replaces `omp --version`.
@@ -27,7 +26,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 type Status = "PASS" | "FAIL" | "SKIP";
-type Key = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h";
+type Key = "a" | "b" | "c" | "d" | "e";
 
 type Item = {
 	status: Status;
@@ -35,21 +34,17 @@ type Item = {
 };
 
 const LABELS: Record<Key, string> = {
-	a: "HONCHO_API_KEY",
-	b: "HONCHO env vars",
-	c: "LINEAR_API_KEY",
-	d: "gh auth",
-	e: "omp config",
-	f: "agent symlinks",
-	g: "honcho state",
-	h: "agent honcho config",
+	a: "LINEAR_API_KEY",
+	b: "gh auth",
+	c: "omp config",
+	d: "agent symlinks",
+	e: "SpecSafe state",
 };
 
-const REQUIRED_KEYS: ReadonlySet<Key> = new Set<Key>(["a", "b", "d", "e", "f"]);
-const OPTIONAL_KEYS: ReadonlySet<Key> = new Set<Key>(["c", "g", "h"]);
+const ALL_KEYS: readonly Key[] = ["a", "b", "c", "d", "e"];
 
 // ---------------------------------------------------------------------------
-// Secret sanitization — mirrors .omp/tools/honcho/index.ts:69-73
+// Secret sanitization — currently only LINEAR_API_KEY is probe-sensitive.
 // ---------------------------------------------------------------------------
 
 function sanitize(
@@ -65,7 +60,7 @@ function sanitize(
 }
 
 // ---------------------------------------------------------------------------
-// Honcho state-file parsing — inlined from .omp/hooks/specsafe-session.ts
+// SpecSafe state-file parsing — inlined from .omp/hooks/specsafe-session.ts
 // (intentionally non-quarantining: env-doctor is read-only)
 // ---------------------------------------------------------------------------
 
@@ -82,39 +77,11 @@ function parseStateFile(filePath: string): ParseResult {
 		if (!parsed || typeof parsed !== "object") {
 			return { kind: "fail", reason: "parse error: not a JSON object" };
 		}
-		if (
-			!("currentSlice" in parsed) ||
-			!Array.isArray((parsed as { history?: unknown }).history)
-		) {
+		if (!("currentSlice" in parsed) || !("history" in parsed)) {
 			return { kind: "fail", reason: "parse error: missing required fields" };
 		}
-		return { kind: "ok" };
-	} catch (e) {
-		const msg = e instanceof Error ? e.message : String(e);
-		return { kind: "fail", reason: `parse error: ${msg}` };
-	}
-}
-
-function parseAgentHonchoConfig(filePath: string): ParseResult {
-	if (!fs.existsSync(filePath)) return { kind: "absent" };
-	try {
-		const raw = fs.readFileSync(filePath, "utf-8");
-		const parsed = JSON.parse(raw);
-		if (!parsed || typeof parsed !== "object") {
-			return { kind: "fail", reason: "parse error: not a JSON object" };
-		}
-		// mode 0600 spot-check (best-effort; some filesystems strip mode bits).
-		try {
-			const st = fs.statSync(filePath);
-			const perm = st.mode & 0o777;
-			if (perm !== 0o600 && process.platform !== "win32") {
-				return {
-					kind: "fail",
-					reason: `mode ${perm.toString(8)} (expected 0600)`,
-				};
-			}
-		} catch {
-			// stat failure is non-fatal; we already read the file.
+		if (!Array.isArray(parsed.history)) {
+			return { kind: "fail", reason: "parse error: history is not an array" };
 		}
 		return { kind: "ok" };
 	} catch (e) {
@@ -132,16 +99,6 @@ type ProbeOutput = {
 	stdout: string;
 	stderr: string;
 };
-
-// Derive the per-cwd session id used by the omp shell function (slice-008.6
-// wiring: workspace=oh-my-pi, session=<peer>-<basename-of-cwd>). Used as a
-// fallback when HONCHO_SESSION_ID is not set in the calling shell, which is
-// the common case when env-doctor is invoked outside the omp wrapper.
-function deriveSessionId(env: NodeJS.ProcessEnv): string {
-	const rawPeer = env.HONCHO_PEER_NAME ?? env.HONCHO_PEER_ID ?? "luci";
-	const peer = rawPeer.toLowerCase();
-	return `${peer}-${path.basename(process.cwd())}`;
-}
 
 // Locate the omp binary. The omp shell function adds bun's global bin to
 // PATH, but a child subprocess spawned from `bun run ...` may not see that
@@ -196,103 +153,6 @@ function runStub(cmd: string, args: string[] = []): ProbeOutput {
 		stdout: r.stdout ?? "",
 		stderr: r.stderr ?? (r.error ? String(r.error) : ""),
 	};
-}
-
-function checkHonchoProbe(env: NodeJS.ProcessEnv, secrets: string[]): Item {
-	const apiKey = env.HONCHO_API_KEY;
-	if (!apiKey) return { status: "FAIL", note: "missing HONCHO_API_KEY" };
-	const stubCmd = env.PI_ENVDOCTOR_HONCHO_PROBE_CMD;
-	let probe: ProbeOutput;
-	if (stubCmd) {
-		probe = runStub(stubCmd);
-	} else {
-		const probeEnv = env.HONCHO_SESSION_ID
-			? env
-			: ({
-					...env,
-					HONCHO_SESSION_ID: deriveSessionId(env),
-				} as NodeJS.ProcessEnv);
-		probe = runRealHonchoProbe(probeEnv);
-	}
-	const combinedRaw = `${probe.stdout}\n${probe.stderr}`;
-	const combined = sanitize(combinedRaw, secrets);
-	const lower = combinedRaw.toLowerCase();
-
-	const sessionNotFound =
-		lower.includes("session-not-found") ||
-		lower.includes("session_not_found") ||
-		lower.includes("not_found") ||
-		lower.includes("session not found") ||
-		lower.includes(" 404");
-
-	if (sessionNotFound) {
-		return { status: "PASS", note: "auth OK (session not found)" };
-	}
-	if (probe.exitCode === 0) {
-		return { status: "PASS", note: "auth OK" };
-	}
-	const m = combinedRaw.match(/\b(40[0-9])\b/);
-	const code = m ? m[1] : null;
-	const firstLine =
-		combined.trim().split(/\r?\n/)[0]?.slice(0, 200) || "probe failed";
-	const note = code ? `${code}: ${firstLine}` : `probe failed: ${firstLine}`;
-	return { status: "FAIL", note };
-}
-
-function runRealHonchoProbe(env: NodeJS.ProcessEnv): ProbeOutput {
-	// Real-network path; tests always use the stub. We invoke the SDK via a
-	// short bun subprocess so failures are isolated and timeouts can be bounded.
-	try {
-		// Inline child-script: import @honcho-ai/sdk and run a single search.
-		const script = `
-			import { Honcho } from "@honcho-ai/sdk";
-			const c = new Honcho({
-				apiKey: process.env.HONCHO_API_KEY,
-				workspaceId: process.env.HONCHO_WORKSPACE_ID,
-				...(process.env.HONCHO_BASE_URL ? { baseURL: process.env.HONCHO_BASE_URL } : {}),
-			});
-			(async () => {
-				try {
-					const s = await c.session(process.env.HONCHO_SESSION_ID);
-					await s.search("__envdoctor_probe__");
-					process.stdout.write("ok");
-				} catch (e) {
-					const msg = (e && e.message) ? e.message : String(e);
-					process.stderr.write(msg);
-					process.exit(/40[13]/.test(msg) ? 1 : (/not.?found/i.test(msg) ? 0 : 1));
-				}
-			})();
-		`;
-		const r = spawnSync("bun", ["-e", script], {
-			encoding: "utf-8",
-			env: { ...env } as NodeJS.ProcessEnv,
-			timeout: 15_000,
-		});
-		return {
-			exitCode: r.status ?? 1,
-			stdout: r.stdout ?? "",
-			stderr: r.stderr ?? "",
-		};
-	} catch (e) {
-		const msg = e instanceof Error ? e.message : String(e);
-		return { exitCode: 1, stdout: "", stderr: msg };
-	}
-}
-
-function checkHonchoEnvVars(env: NodeJS.ProcessEnv): Item {
-	const required = ["HONCHO_WORKSPACE_ID", "HONCHO_PEER_ID"] as const;
-	const missing = required.filter((k) => !env[k]);
-	if (missing.length > 0) {
-		return { status: "FAIL", note: `missing: ${missing.join(", ")}` };
-	}
-	if (!env.HONCHO_SESSION_ID) {
-		const derived = deriveSessionId(env);
-		return {
-			status: "PASS",
-			note: `HONCHO_SESSION_ID auto-derived: ${derived}`,
-		};
-	}
-	return { status: "PASS" };
 }
 
 function checkLinear(
@@ -385,25 +245,13 @@ function checkAgentSymlinks(cwd: string): Item {
 	return { status: "FAIL", note: failures.join("; ") };
 }
 
-function checkHonchoState(cwd: string, strict: boolean): Item {
-	const filePath = path.join(cwd, ".pi", ".honcho-state.json");
+function checkSpecSafeState(cwd: string, strict: boolean): Item {
+	const filePath = path.join(cwd, ".pi", ".specsafe-state.json");
 	const r = parseStateFile(filePath);
 	if (r.kind === "absent") {
 		return strict
-			? { status: "FAIL", note: ".pi/.honcho-state.json absent (--strict)" }
-			: { status: "SKIP", note: ".pi/.honcho-state.json absent" };
-	}
-	if (r.kind === "fail") return { status: "FAIL", note: r.reason };
-	return { status: "PASS" };
-}
-
-function checkAgentHonchoConfig(strict: boolean): Item {
-	const filePath = path.join(os.homedir(), ".omp", "agent", "honcho.json");
-	const r = parseAgentHonchoConfig(filePath);
-	if (r.kind === "absent") {
-		return strict
-			? { status: "FAIL", note: "~/.omp/agent/honcho.json absent (--strict)" }
-			: { status: "SKIP", note: "~/.omp/agent/honcho.json absent" };
+			? { status: "FAIL", note: ".pi/.specsafe-state.json absent (--strict)" }
+			: { status: "SKIP", note: ".pi/.specsafe-state.json absent" };
 	}
 	if (r.kind === "fail") return { status: "FAIL", note: r.reason };
 	return { status: "PASS" };
@@ -439,24 +287,21 @@ function main(): number {
 	}
 	const { strict, json } = parsed;
 	const env = process.env;
-	const secrets = [env.HONCHO_API_KEY, env.LINEAR_API_KEY].filter(
+	const secrets = [env.LINEAR_API_KEY].filter(
 		(s): s is string => typeof s === "string" && s.length > 0,
 	);
 	const cwd = process.cwd();
 
 	const results: Record<Key, Item> = {
-		a: checkHonchoProbe(env, secrets),
-		b: checkHonchoEnvVars(env),
-		c: checkLinear(env, strict, secrets),
-		d: checkGhAuth(env, secrets),
-		e: checkOmpConfig(env, secrets),
-		f: checkAgentSymlinks(cwd),
-		g: checkHonchoState(cwd, strict),
-		h: checkAgentHonchoConfig(strict),
+		a: checkLinear(env, strict, secrets),
+		b: checkGhAuth(env, secrets),
+		c: checkOmpConfig(env, secrets),
+		d: checkAgentSymlinks(cwd),
+		e: checkSpecSafeState(cwd, strict),
 	};
 
 	// Final sanitization pass — every note string scrubbed of any secret.
-	for (const k of Object.keys(results) as Key[]) {
+	for (const k of ALL_KEYS) {
 		const item = results[k];
 		if (item.note) item.note = sanitize(item.note, secrets);
 	}
@@ -465,14 +310,12 @@ function main(): number {
 	// an absent prerequisite SKIPs (default) or FAILs (--strict); once an
 	// optional check has actually failed (e.g. a corrupt state file), that's a
 	// real fault and exit 1 regardless of --strict.
-	const anyFail = (Object.keys(results) as Key[]).some(
-		(k) => results[k].status === "FAIL",
-	);
+	const anyFail = ALL_KEYS.some((k) => results[k].status === "FAIL");
 	const exitCode = anyFail ? 1 : 0;
 
 	if (json) {
 		const payload: Record<string, Item> = {};
-		for (const k of Object.keys(results) as Key[]) {
+		for (const k of ALL_KEYS) {
 			payload[k] = results[k];
 		}
 		process.stdout.write(JSON.stringify(payload));
@@ -480,7 +323,7 @@ function main(): number {
 	}
 
 	const lines: string[] = [];
-	for (const k of Object.keys(results) as Key[]) {
+	for (const k of ALL_KEYS) {
 		const item = results[k];
 		const noteSuffix = item.note ? ` — ${item.note}` : "";
 		lines.push(`${LABELS[k]}: ${item.status}${noteSuffix}`);
@@ -493,4 +336,4 @@ if (import.meta.main) {
 	process.exit(main());
 }
 
-export { main, sanitize, parseStateFile, parseAgentHonchoConfig };
+export { main, sanitize, parseStateFile };

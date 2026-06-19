@@ -130,7 +130,7 @@ export function sanitizeLib(lib: string): string {
 	if (/^\.+$/.test(lib) || lib.includes("..") || /[\\\0]/.test(lib)) {
 		throw new Error(`invalid lib name (path-traversal rejected): ${lib}`);
 	}
-	// @honcho-ai/sdk → @honcho-ai-sdk (keep @, replace slashes).
+	// @linear/sdk → @linear-sdk (keep @, replace slashes).
 	return lib.replace(/\//g, "-");
 }
 

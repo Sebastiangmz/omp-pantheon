@@ -47,8 +47,8 @@ function mkEnv(registry?: Registry): TestEnv {
 	});
 	const r = registry ?? {
 		_meta: { ttl_days_default: 7 },
-		"@honcho-ai/sdk": {
-			url: "https://example.com/honcho-readme.md",
+		"@linear/sdk": {
+			url: "https://example.com/linear-readme.md",
 			type: "markdown",
 			verified: false,
 		},
@@ -203,7 +203,7 @@ describe("list", () => {
 			htmlToMarkdown: noopHtmlToMd,
 		});
 		expect(result.exit).toBe(0);
-		expect(result.stdout).toContain("@honcho-ai/sdk");
+		expect(result.stdout).toContain("@linear/sdk");
 		expect(result.stdout).toContain("hono");
 		expect(result.stdout).toContain("never"); // no cache yet
 		expect(result.stdout).toContain("markdown");
@@ -213,10 +213,10 @@ describe("list", () => {
 	test("list shows last-fetched date after a fetch", async () => {
 		const env = mkEnv();
 		const fetchFn = mockFetch({
-			"https://example.com/honcho-readme.md": { body: "# Honcho\n\nhello\n" },
+			"https://example.com/linear-readme.md": { body: "# Linear\n\nhello\n" },
 		});
 		const fakeNow = new Date("2026-04-24T10:00:00Z");
-		await dispatch(["fetch", "@honcho-ai/sdk"], {
+		await dispatch(["fetch", "@linear/sdk"], {
 			cwd: env.cwd,
 			env: {},
 			fetchFn,
@@ -242,12 +242,12 @@ describe("fetch", () => {
 	test("AC2: fetch writes Markdown with YAML frontmatter to dated cache path", async () => {
 		const env = mkEnv();
 		const fetchFn = mockFetch({
-			"https://example.com/honcho-readme.md": {
-				body: "# Honcho SDK\n\nuse it\n",
+			"https://example.com/linear-readme.md": {
+				body: "# Linear SDK\n\nuse it\n",
 			},
 		});
 		const fakeNow = new Date("2026-04-24T10:00:00Z");
-		const result = await dispatch(["fetch", "@honcho-ai/sdk"], {
+		const result = await dispatch(["fetch", "@linear/sdk"], {
 			cwd: env.cwd,
 			env: {},
 			fetchFn,
@@ -256,7 +256,7 @@ describe("fetch", () => {
 		});
 		expect(result.exit).toBe(0);
 		expect(result.stdout).toContain(".docs-cache");
-		expect(result.stdout).toContain("@honcho-ai-sdk");
+		expect(result.stdout).toContain("@linear-sdk");
 		expect(result.stdout).toContain("2026-04-24.md");
 
 		// Verify file on disk
@@ -264,16 +264,16 @@ describe("fetch", () => {
 			env.cwd,
 			".pi",
 			".docs-cache",
-			"@honcho-ai-sdk",
+			"@linear-sdk",
 			"2026-04-24.md",
 		);
 		expect(fs.existsSync(file)).toBe(true);
 		const content = fs.readFileSync(file, "utf8");
 		expect(content).toContain(
-			"---\nsource_url: https://example.com/honcho-readme.md",
+			"---\nsource_url: https://example.com/linear-readme.md",
 		);
 		expect(content).toContain("content_hash:");
-		expect(content).toContain("# Honcho SDK");
+		expect(content).toContain("# Linear SDK");
 	});
 
 	test("type=html runs htmlToMarkdown with selector scoping", async () => {
@@ -316,7 +316,7 @@ describe("fetch", () => {
 			return { ok: true, status: 200, text: async () => "# first\n" };
 		};
 		const fakeNow = new Date("2026-04-24T10:00:00Z");
-		await dispatch(["fetch", "@honcho-ai/sdk"], {
+		await dispatch(["fetch", "@linear/sdk"], {
 			cwd: env.cwd,
 			env: {},
 			fetchFn,
@@ -325,7 +325,7 @@ describe("fetch", () => {
 		});
 		expect(fetchCalls).toBe(1);
 
-		const second = await dispatch(["fetch", "@honcho-ai/sdk"], {
+		const second = await dispatch(["fetch", "@linear/sdk"], {
 			cwd: env.cwd,
 			env: {},
 			fetchFn,
@@ -344,14 +344,14 @@ describe("fetch", () => {
 			return { ok: true, status: 200, text: async () => `# v${fetchCalls}\n` };
 		};
 		const fakeNow = new Date("2026-04-24T10:00:00Z");
-		await dispatch(["fetch", "@honcho-ai/sdk"], {
+		await dispatch(["fetch", "@linear/sdk"], {
 			cwd: env.cwd,
 			env: {},
 			fetchFn,
 			htmlToMarkdown: noopHtmlToMd,
 			now: () => fakeNow,
 		});
-		await dispatch(["fetch", "@honcho-ai/sdk", "--refresh"], {
+		await dispatch(["fetch", "@linear/sdk", "--refresh"], {
 			cwd: env.cwd,
 			env: {},
 			fetchFn,
@@ -377,12 +377,12 @@ describe("fetch", () => {
 	test("non-2xx response surfaces HTTP error", async () => {
 		const env = mkEnv();
 		const fetchFn = mockFetch({
-			"https://example.com/honcho-readme.md": {
+			"https://example.com/linear-readme.md": {
 				status: 500,
 				body: "server error",
 			},
 		});
-		const result = await dispatch(["fetch", "@honcho-ai/sdk"], {
+		const result = await dispatch(["fetch", "@linear/sdk"], {
 			cwd: env.cwd,
 			env: {},
 			fetchFn,
@@ -401,17 +401,17 @@ describe("show", () => {
 	test("AC3: show prints cached body without stale warning when fresh", async () => {
 		const env = mkEnv();
 		const fetchFn = mockFetch({
-			"https://example.com/honcho-readme.md": { body: "# H\n\nbody\n" },
+			"https://example.com/linear-readme.md": { body: "# H\n\nbody\n" },
 		});
 		const fakeNow = new Date("2026-04-24T10:00:00Z");
-		await dispatch(["fetch", "@honcho-ai/sdk"], {
+		await dispatch(["fetch", "@linear/sdk"], {
 			cwd: env.cwd,
 			env: {},
 			fetchFn,
 			htmlToMarkdown: noopHtmlToMd,
 			now: () => fakeNow,
 		});
-		const result = await dispatch(["show", "@honcho-ai/sdk"], {
+		const result = await dispatch(["show", "@linear/sdk"], {
 			cwd: env.cwd,
 			env: {},
 			fetchFn,
@@ -426,10 +426,10 @@ describe("show", () => {
 	test("AC3: show prints stale warning when cache >TTL", async () => {
 		const env = mkEnv();
 		const fetchFn = mockFetch({
-			"https://example.com/honcho-readme.md": { body: "# old\n" },
+			"https://example.com/linear-readme.md": { body: "# old\n" },
 		});
 		const fetched = new Date("2026-04-01T10:00:00Z");
-		await dispatch(["fetch", "@honcho-ai/sdk"], {
+		await dispatch(["fetch", "@linear/sdk"], {
 			cwd: env.cwd,
 			env: {},
 			fetchFn,
@@ -438,7 +438,7 @@ describe("show", () => {
 		});
 		// Now query 10 days later
 		const later = new Date("2026-04-11T10:00:00Z");
-		const result = await dispatch(["show", "@honcho-ai/sdk"], {
+		const result = await dispatch(["show", "@linear/sdk"], {
 			cwd: env.cwd,
 			env: {},
 			fetchFn,
@@ -453,12 +453,12 @@ describe("show", () => {
 	test("AC4: show --section=X prints only that section", async () => {
 		const env = mkEnv();
 		const fetchFn = mockFetch({
-			"https://example.com/honcho-readme.md": {
+			"https://example.com/linear-readme.md": {
 				body: "# Title\n\nintro\n\n## Installation\n\nnpm install\n\n## Usage\n\nuse it\n",
 			},
 		});
 		const fakeNow = new Date("2026-04-24T10:00:00Z");
-		await dispatch(["fetch", "@honcho-ai/sdk"], {
+		await dispatch(["fetch", "@linear/sdk"], {
 			cwd: env.cwd,
 			env: {},
 			fetchFn,
@@ -466,7 +466,7 @@ describe("show", () => {
 			now: () => fakeNow,
 		});
 		const result = await dispatch(
-			["show", "@honcho-ai/sdk", "--section=Installation"],
+			["show", "@linear/sdk", "--section=Installation"],
 			{
 				cwd: env.cwd,
 				env: {},
@@ -488,7 +488,7 @@ describe("show", () => {
 			fetchCalls++;
 			return { ok: true, status: 200, text: async () => "# auto-fetched\n" };
 		};
-		const result = await dispatch(["show", "@honcho-ai/sdk"], {
+		const result = await dispatch(["show", "@linear/sdk"], {
 			cwd: env.cwd,
 			env: {},
 			fetchFn,
@@ -656,7 +656,7 @@ describe("project registry + gitignore", () => {
 		const reg = loadRegistry(repoRoot);
 		const expected = [
 			"@linear/sdk",
-			"@honcho-ai/sdk",
+			"@linear/sdk",
 			"hono",
 			"better-auth",
 			"drizzle-orm",
@@ -697,7 +697,7 @@ describe("sanitizeLib", () => {
 		expect(() => sanitizeLib("a\0b")).toThrow("path-traversal rejected");
 	});
 
-	test("regression: @honcho-ai/sdk → @honcho-ai-sdk", () => {
-		expect(sanitizeLib("@honcho-ai/sdk")).toBe("@honcho-ai-sdk");
+	test("regression: @linear/sdk → @linear-sdk", () => {
+		expect(sanitizeLib("@linear/sdk")).toBe("@linear-sdk");
 	});
 });

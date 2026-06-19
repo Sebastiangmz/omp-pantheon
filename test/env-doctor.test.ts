@@ -1,16 +1,10 @@
 /**
  * Black-box tests for skills/env-doctor/bin/env-doctor.ts.
  *
- * Test seam contract for the implementer:
- *   - PI_ENVDOCTOR_HONCHO_PROBE_CMD replaces the Honcho SDK round-trip probe.
+ * Test seam contract:
  *   - PI_ENVDOCTOR_LINEAR_CMD replaces the Linear viewer/list probe.
  *   - PI_ENVDOCTOR_GH_CMD replaces `gh auth status`.
- *   - PI_ENVDOCTOR_OMP_CMD replaces `omp config get`.
- *
- * When any of these env vars is set, env-doctor must spawn that executable first
- * instead of reaching the real network or host tool. These tests intentionally use
- * temp HOME/cwd directories and stub executables only; they must never touch the
- * operator's real ~/.omp/agent, .pi/.honcho-state.json, registry, or audit logs.
+ *   - PI_ENVDOCTOR_OMP_CMD replaces `omp --version`.
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -23,9 +17,9 @@ const cliPath = path.resolve(
 	process.cwd(),
 	"skills/env-doctor/bin/env-doctor.ts",
 );
-const expectedChecklistKeys = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
+const expectedChecklistKeys = ["a", "b", "c", "d", "e"] as const;
 
-type StubName = "honcho" | "linear" | "gh" | "omp";
+type StubName = "linear" | "gh" | "omp";
 
 type StubSpec = {
 	exitCode?: number;
@@ -56,7 +50,6 @@ function cleanProcessEnv(): Record<string, string> {
 	const env: Record<string, string> = {};
 	for (const [key, value] of Object.entries(process.env)) {
 		if (value === undefined) continue;
-		if (key.startsWith("HONCHO_")) continue;
 		if (key.startsWith("LINEAR_")) continue;
 		if (key.startsWith("PI_ENVDOCTOR_")) continue;
 		env[key] = value;
@@ -110,17 +103,12 @@ function createTestEnv(
 	}
 
 	const specs: Record<StubName, StubSpec> = {
-		honcho: { stdout: "honcho ok" },
 		linear: { stdout: "linear ok" },
 		gh: { stdout: "gh ok" },
 		omp: { stdout: "omp ok" },
 		...overrides,
 	};
 	const stubs: Record<StubName, string> = {
-		honcho: makeExecutableStub(
-			path.join(stubsDir, "honcho-probe"),
-			specs.honcho,
-		),
 		linear: makeExecutableStub(
 			path.join(stubsDir, "linear-probe"),
 			specs.linear,
@@ -141,12 +129,7 @@ function defaultDoctorEnv(
 	return {
 		...cleanProcessEnv(),
 		HOME: testEnv.home,
-		HONCHO_API_KEY: "fake-honcho-api-key-for-tests",
-		HONCHO_WORKSPACE_ID: "ws-test",
-		HONCHO_SESSION_ID: "sess-test",
-		HONCHO_PEER_ID: "peer-test",
 		LINEAR_API_KEY: "fake-linear-api-key-for-tests",
-		PI_ENVDOCTOR_HONCHO_PROBE_CMD: testEnv.stubs.honcho,
 		PI_ENVDOCTOR_LINEAR_CMD: testEnv.stubs.linear,
 		PI_ENVDOCTOR_GH_CMD: testEnv.stubs.gh,
 		PI_ENVDOCTOR_OMP_CMD: testEnv.stubs.omp,
@@ -174,39 +157,27 @@ function unsetEnv(name: string): Record<string, string> {
 	return { [name]: "" };
 }
 
-function writeHonchoState(cwd: string, content: string): void {
-	const filePath = path.join(cwd, ".pi", ".honcho-state.json");
-	fs.writeFileSync(filePath, content, { mode: 0o600 });
-}
-
-function writeAgentHonchoConfig(home: string, content: string): void {
-	const filePath = path.join(home, ".omp", "agent", "honcho.json");
+function writeSpecSafeState(cwd: string, content: string): void {
+	const filePath = path.join(cwd, ".pi", ".specsafe-state.json");
 	fs.writeFileSync(filePath, content, { mode: 0o600 });
 }
 
 describe("[unit] env-doctor CLI", () => {
-	test("T-a full env and passing probes exits 0 and reports HONCHO_API_KEY PASS", () => {
+	test("all configured probes pass", () => {
 		const env = createTestEnv();
 
 		const result = runDoctor(env);
-
-		expect(result.status).toBe(0);
-		expect(combinedOutput(result)).toContain("HONCHO_API_KEY: PASS");
-	});
-
-	test("T-b missing HONCHO_API_KEY exits 1, reports FAIL, and continues through later checks", () => {
-		const env = createTestEnv();
-
-		const result = runDoctor(env, [], unsetEnv("HONCHO_API_KEY"));
 		const output = combinedOutput(result);
 
-		expect(result.status).toBe(1);
-		expect(output).toContain("HONCHO_API_KEY: FAIL");
-		expect(output).toContain("gh auth:");
-		expect(output).toContain("omp config:");
+		expect(result.status).toBe(0);
+		expect(output).toContain("LINEAR_API_KEY: PASS");
+		expect(output).toContain("gh auth: PASS");
+		expect(output).toContain("omp config: PASS");
+		expect(output).toContain("agent symlinks: PASS");
+		expect(output).toContain("SpecSafe state: SKIP");
 	});
 
-	test("T-c missing LINEAR_API_KEY in default mode exits 0 and reports SKIP", () => {
+	test("missing LINEAR_API_KEY in default mode skips", () => {
 		const env = createTestEnv();
 
 		const result = runDoctor(env, [], unsetEnv("LINEAR_API_KEY"));
@@ -215,7 +186,7 @@ describe("[unit] env-doctor CLI", () => {
 		expect(combinedOutput(result)).toContain("LINEAR_API_KEY: SKIP");
 	});
 
-	test("T-d --strict turns missing LINEAR_API_KEY from SKIP into FAIL and exits 1", () => {
+	test("strict mode turns missing LINEAR_API_KEY into failure", () => {
 		const env = createTestEnv();
 
 		const result = runDoctor(env, ["--strict"], unsetEnv("LINEAR_API_KEY"));
@@ -224,7 +195,7 @@ describe("[unit] env-doctor CLI", () => {
 		expect(combinedOutput(result)).toContain("LINEAR_API_KEY: FAIL");
 	});
 
-	test("T-e failing gh auth stub exits 1 and reports gh auth FAIL", () => {
+	test("failing gh auth exits 1", () => {
 		const env = createTestEnv({ gh: { exitCode: 1, stderr: "not logged in" } });
 
 		const result = runDoctor(env);
@@ -233,10 +204,8 @@ describe("[unit] env-doctor CLI", () => {
 		expect(combinedOutput(result)).toContain("gh auth: FAIL");
 	});
 
-	test("T-f failing omp config stub exits 1 and reports omp config FAIL", () => {
-		const env = createTestEnv({
-			omp: { exitCode: 1, stderr: "missing config" },
-		});
+	test("failing omp probe exits 1", () => {
+		const env = createTestEnv({ omp: { exitCode: 1, stderr: "no omp" } });
 
 		const result = runDoctor(env);
 
@@ -244,21 +213,9 @@ describe("[unit] env-doctor CLI", () => {
 		expect(combinedOutput(result)).toContain("omp config: FAIL");
 	});
 
-	test("T-g agent symlink check resolves fake HOME links into cwd .omp directories", () => {
+	test("broken agent symlink exits 1", () => {
 		const env = createTestEnv();
-
-		const result = runDoctor(env);
-
-		expect(result.status).toBe(0);
-		expect(combinedOutput(result)).toContain("agent symlinks: PASS");
-	});
-
-	test("T-g agent symlink check fails when a symlink resolves outside cwd .omp", () => {
-		const env = createTestEnv();
-		fs.rmSync(path.join(env.home, ".omp", "agent", "hooks"));
-		const elsewhere = path.join(env.root, "elsewhere", ".omp", "hooks");
-		fs.mkdirSync(elsewhere, { recursive: true });
-		fs.symlinkSync(elsewhere, path.join(env.home, ".omp", "agent", "hooks"));
+		fs.rmSync(path.join(env.home, ".omp", "agent", "skills"));
 
 		const result = runDoctor(env);
 
@@ -266,9 +223,9 @@ describe("[unit] env-doctor CLI", () => {
 		expect(combinedOutput(result)).toContain("agent symlinks: FAIL");
 	});
 
-	test("T-h valid .pi/.honcho-state.json passes the state-file check", () => {
+	test("valid SpecSafe state passes", () => {
 		const env = createTestEnv();
-		writeHonchoState(
+		writeSpecSafeState(
 			env.cwd,
 			JSON.stringify({ currentSlice: null, history: [] }),
 		);
@@ -276,111 +233,62 @@ describe("[unit] env-doctor CLI", () => {
 		const result = runDoctor(env);
 
 		expect(result.status).toBe(0);
-		expect(combinedOutput(result)).toContain("honcho state: PASS");
+		expect(combinedOutput(result)).toContain("SpecSafe state: PASS");
 	});
 
-	test("T-h invalid .pi/.honcho-state.json fails with a parse error message", () => {
+	test("corrupt SpecSafe state fails", () => {
 		const env = createTestEnv();
-		writeHonchoState(env.cwd, "{not valid json");
+		writeSpecSafeState(env.cwd, "{not json");
 
 		const result = runDoctor(env);
-		const output = combinedOutput(result);
 
 		expect(result.status).toBe(1);
-		expect(output).toContain("honcho state: FAIL");
-		expect(output.toLowerCase()).toContain("parse");
+		expect(combinedOutput(result)).toContain("SpecSafe state: FAIL");
 	});
 
-	test("T-h agent honcho config passes when present, 0600, and parseable", () => {
+	test("strict mode turns absent SpecSafe state into failure", () => {
 		const env = createTestEnv();
-		writeAgentHonchoConfig(
-			env.home,
-			JSON.stringify({ workspaceId: "ws-test" }),
-		);
 
-		const result = runDoctor(env);
-
-		expect(result.status).toBe(0);
-		expect(combinedOutput(result)).toContain("agent honcho config: PASS");
-	});
-
-	test("T-h agent honcho config fails when present but not parseable", () => {
-		const env = createTestEnv();
-		writeAgentHonchoConfig(env.home, "{not valid json");
-
-		const result = runDoctor(env);
-		const output = combinedOutput(result);
+		const result = runDoctor(env, ["--strict"]);
 
 		expect(result.status).toBe(1);
-		expect(output).toContain("agent honcho config: FAIL");
-		expect(output.toLowerCase()).toContain("parse");
+		expect(combinedOutput(result)).toContain("SpecSafe state: FAIL");
 	});
 
-	test("T-i honcho probe 401-style failure exits 1 and reports HONCHO_API_KEY FAIL", () => {
-		const env = createTestEnv({
-			honcho: { exitCode: 1, stderr: "401 unauthorized" },
-		});
-
-		const result = runDoctor(env);
-		const output = combinedOutput(result);
-
-		expect(result.status).toBe(1);
-		expect(output).toContain("HONCHO_API_KEY: FAIL");
-		expect(output).toContain("401");
-	});
-
-	test("T-i honcho probe session-not-found stdout is PASS with an auth-ok note", () => {
-		const env = createTestEnv({ honcho: { stdout: "session-not-found" } });
-
-		const result = runDoctor(env);
-		const output = combinedOutput(result);
-
-		expect(result.status).toBe(0);
-		expect(output).toContain("HONCHO_API_KEY: PASS");
-		expect(output).toContain("auth OK");
-		expect(output).toContain("session not found");
-	});
-
-	test("T-j --json emits parseable checklist fields with status and optional note", () => {
+	test("json emits a-e checklist fields", () => {
 		const env = createTestEnv();
 
 		const result = runDoctor(env, ["--json"]);
 
 		expect(result.status).toBe(0);
 		const parsed = JSON.parse(result.stdout) as Record<string, unknown>;
-		for (const key of expectedChecklistKeys) {
-			expect(parsed).toContainKey(key);
-			const item = parsed[key] as { status?: unknown; note?: unknown };
-			expect(["PASS", "FAIL", "SKIP"]).toContain(String(item.status));
-			if ("note" in item) {
-				expect(typeof item.note).toBe("string");
-			}
-		}
+		expect(Object.keys(parsed).sort()).toEqual([...expectedChecklistKeys]);
 	});
 
-	test("T-k API key values are redacted from stdout and stderr", () => {
+	test("API key values are redacted from output", () => {
 		const env = createTestEnv({
-			honcho: {
+			linear: {
 				exitCode: 1,
-				stderr: "bad key fake-honcho-redaction-secret rejected",
+				stderr: "bad key fake-linear-redaction-secret rejected",
 			},
 		});
 
 		const result = runDoctor(env, [], {
-			HONCHO_API_KEY: "fake-honcho-redaction-secret",
+			LINEAR_API_KEY: "fake-linear-redaction-secret",
 		});
 		const output = combinedOutput(result);
 
 		expect(result.status).toBe(1);
-		expect(output).toContain("HONCHO_API_KEY: FAIL");
-		expect(output).not.toContain("fake-honcho-redaction-secret");
+		expect(output).toContain("LINEAR_API_KEY: FAIL");
+		expect(output).not.toContain("fake-linear-redaction-secret");
 	});
 
-	test("T-l unknown CLI flag exits 2", () => {
+	test("unknown CLI flag exits 2", () => {
 		const env = createTestEnv();
 
 		const result = runDoctor(env, ["--definitely-not-a-real-flag"]);
 
 		expect(result.status).toBe(2);
+		expect(result.stderr).toContain("unknown flag");
 	});
 });

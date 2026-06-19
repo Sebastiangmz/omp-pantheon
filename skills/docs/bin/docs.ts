@@ -115,9 +115,7 @@ function parsePatchHeader(content: string): PatchHeader | null {
 }
 
 /** List all pending draft files (excludes .discarded/ and .applied/ subdirs) */
-function listPendingDrafts(
-	cwd: string,
-): Array<{
+function listPendingDrafts(cwd: string): Array<{
 	id: string;
 	filePath: string;
 	content: string;
@@ -366,7 +364,7 @@ async function cmdApply(
 		};
 	}
 
-	// 3. Read honcho state for open slice
+	// 3. Read SpecSafe state for open slice
 	const statePath = statePathFor(opts.cwd);
 	const state = readStateFileOrNull(statePath);
 	const sliceId = state?.currentSlice?.id ?? null;

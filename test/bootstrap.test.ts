@@ -19,8 +19,8 @@ const bootstrapBin = path.resolve(
 const piSeshatRoot = process.cwd();
 const expectedOmpTarget = piSeshatRoot;
 const gitignorePatterns = [
-	".pi/.honcho-state.json",
-	".pi/.honcho-state.json.corrupt-*",
+	".pi/.specsafe-state.json",
+	".pi/.specsafe-state.json.corrupt-*",
 	".pi/.push-log.jsonl",
 	".pi/.linear-log.jsonl",
 	".pi/.github-log.jsonl",
@@ -49,8 +49,6 @@ function runBootstrap(
 		encoding: "utf-8",
 		env: {
 			...process.env,
-			HONCHO_PEER_ID: "Luci",
-			HONCHO_WORKSPACE_ID: "oh-my-pi",
 		},
 	});
 }

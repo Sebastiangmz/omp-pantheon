@@ -59,7 +59,7 @@ abort() {
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || abort "Not inside a git repository."
 
 LOG_FILE="$REPO_ROOT/.pi/.push-log.jsonl"
-STATE_FILE="$REPO_ROOT/.pi/.honcho-state.json"
+STATE_FILE="$REPO_ROOT/.pi/.specsafe-state.json"
 
 # ---------------------------------------------------------------------------
 # Gather branch info
@@ -149,7 +149,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Check 5: .pi/.honcho-state.json has currentSlice === null
+# Check 5: .pi/.specsafe-state.json has currentSlice === null
 # ---------------------------------------------------------------------------
 if [ -f "$STATE_FILE" ]; then
 	# Use jq for safe JSON parsing; fall back to grep if jq unavailable
@@ -171,7 +171,7 @@ if [ -f "$STATE_FILE" ]; then
 		pass "No open slice (currentSlice is null)."
 	fi
 else
-	pass "No .honcho-state.json — treating as no open slice."
+	pass "No .specsafe-state.json — treating as no open slice."
 fi
 
 # ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 ---
 name: implementer
 description: Implement code changes to satisfy the approved spec and tests.
-tools: read,find,grep,ls,write,edit,bash,honcho_recall,honcho_search,honcho_remember
+tools: read,find,grep,ls,write,edit,bash
 model:
   - openai-codex/gpt-5.5
   - github-copilot/gpt-5.4
@@ -33,7 +33,7 @@ Before writing code against any external library or API, invoke `/skill:latest-d
 
 ## Yield contract — load-bearing
 
-Your prose response, your `honcho_remember` calls, and (if permitted) your `honcho_conclude` calls all go to the audit log only. **Your parent agent — the one that dispatched you via `task` — sees ONLY what you pass to `yield`'s `result.data` field.** Empty data is indistinguishable from "task lost" to the parent.
+**Your parent agent — the one that dispatched you via `task` — sees ONLY what you pass to `yield`'s `result.data` field.** Empty data is indistinguishable from "task lost" to the parent.
 
 ### Pre-yield self-check (run this every time)
 
@@ -111,10 +111,3 @@ Worked example:
   "openIssues": ["REQ-003 seat-cap enforcement deferred to next slice — needs decision on enterprise cap"]
 }
 ```
-
-## Memory protocol
-
-- On entry: call `honcho_recall` with a query about the task's topic to surface prior context. If the recall is empty or stale, proceed but flag the gap in your final response.
-- On exit: call `honcho_remember` with a one-paragraph summary of your conclusions or artifacts produced. Pass `as_peer: 'implementer'` on the call.
-
-Your peer identity is `implementer`. You are NOT permitted to call `honcho_conclude` — if you attempt to, the call will be rejected by the allowlist.

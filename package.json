@@ -2,19 +2,17 @@
   "name": "omp-pantheon",
   "version": "0.3.0",
   "private": true,
-  "description": "OMP Pantheon plus Seshat/Honcho/SpecSafe integration bundle",
+  "description": "OMP Pantheon plus Seshat/SpecSafe integration bundle",
   "type": "module",
   "scripts": {
     "test": "bun test ./test/*.test.ts ./test/**/*.test.ts ./skills/**/test/*.test.ts",
     "test:unit": "bun test --test-name-pattern='\\[unit\\]' ./test/*.test.ts ./test/**/*.test.ts ./skills/**/test/*.test.ts",
-    "test:live": "HONCHO_TESTS_LIVE=1 bun test ./test/*.test.ts ./test/**/*.test.ts ./skills/**/test/*.test.ts",
     "typecheck": "tsc --noEmit && (cd extensions/oh-my-omp && bun run typecheck)",
-    "format": "bun x --bun @biomejs/biome format --write hooks tools test skills extensions/oh-my-omp/index.ts extensions/oh-my-omp/hooks extensions/oh-my-omp/loop",
-    "format:check": "bun x --bun @biomejs/biome format hooks tools test skills extensions/oh-my-omp/index.ts extensions/oh-my-omp/hooks extensions/oh-my-omp/loop",
-    "lint": "bun x --bun @biomejs/biome check hooks tools test skills extensions/oh-my-omp/index.ts extensions/oh-my-omp/hooks extensions/oh-my-omp/loop"
+    "format": "bun x --bun @biomejs/biome format --write hooks test skills extensions/oh-my-omp/index.ts extensions/oh-my-omp/hooks extensions/oh-my-omp/loop",
+    "format:check": "bun x --bun @biomejs/biome format hooks test skills extensions/oh-my-omp/index.ts extensions/oh-my-omp/hooks extensions/oh-my-omp/loop",
+    "lint": "bun x --bun @biomejs/biome check hooks test skills extensions/oh-my-omp/index.ts extensions/oh-my-omp/hooks extensions/oh-my-omp/loop"
   },
   "dependencies": {
-    "@honcho-ai/sdk": "latest",
     "@linear/sdk": "^82.1.0",
     "turndown": "^7.2.0",
     "typebox": "^1.1.24"

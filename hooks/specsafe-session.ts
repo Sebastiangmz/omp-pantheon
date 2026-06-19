@@ -12,10 +12,7 @@
  *     block on session_shutdown when a slice is open. The slice-lifecycle
  *     tools themselves stay in `.pi/` for the vanilla-Pi runtime; this hook
  *     only consumes the state file when running under Oh My Pi.
- *   - The CostCounter is reproduced by-shape (the source's freshCostCounter
- *     is referenced by .pi/extensions/honcho/index.ts which writes to it).
- *     This hook does NOT mutate the counter — the original session extension
- *     does not either. See PORT-NOTES.md.
+ *   - The CostCounter is reproduced by shape for SpecSafe accounting. This hook does NOT mutate the counter.
  */
 
 import { existsSync, readFileSync, renameSync } from "node:fs";
@@ -27,8 +24,8 @@ import type { HookAPI } from "./types";
 // ---------------------------------------------------------------------------
 
 export type CostCounter = {
-	honchoCalls: number;
-	honchoCost: number;
+	externalMemoryCalls: number;
+	externalMemoryCost: number;
 	subagentTokens: {
 		input: number;
 		output: number;
@@ -63,7 +60,7 @@ export type StateFile = {
 };
 
 export function statePathFor(cwd: string): string {
-	return join(cwd, ".pi", ".honcho-state.json");
+	return join(cwd, ".pi", ".specsafe-state.json");
 }
 
 export function readStateFileOrNull(filePath: string): StateFile | null {
@@ -94,9 +91,9 @@ export function readStateFileOrNull(filePath: string): StateFile | null {
  * Mirrors .pi/extensions/specsafe-subagents/index.ts:90-103.
  *
  *   Co-Authored-By — agent/persona name (NOT the model; per source)
- *   Spec-Slice     — current slice id from .pi/.honcho-state.json
+ *   Spec-Slice     — current slice id from .pi/.specsafe-state.json
  *   Peer           — agent/persona name
- *   Session        — Honcho session id from state file
+ *   Session        — session id from state file
  */
 export function buildTrailerBlock(opts: {
 	agent: string;

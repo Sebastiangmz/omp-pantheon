@@ -9,8 +9,7 @@
  *
  * Port adaptations vs vanilla Pi:
  *   - Vanilla Pi shipped its OWN `subagent` tool that wholesale replaced
- *     dispatch and ran child env injection (HONCHO_PEER_ID, HONCHO_WORKSPACE_ID,
- *     HONCHO_SESSION_ID, SPECSAFE_SLICE_ID) per-spawn via spawn() options.
+ *     dispatch and ran child env injection (SPECSAFE_SLICE_ID and per-agent identity) per-spawn via spawn() options.
  *     Oh My Pi has its own bundled `task` tool whose subprocess we do NOT
  *     control from a hook — there is no clean per-spawn env injection seam.
  *     See PORT-NOTES.md. This port keeps ONLY the auto-commit-with-trailers

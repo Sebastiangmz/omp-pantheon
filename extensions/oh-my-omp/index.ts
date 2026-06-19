@@ -17,12 +17,11 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 
-import { LoopRuntime } from "./loop/runtime";
-import { registerLoopCommands } from "./loop/commands";
-import { registerTodoEnforcer } from "./hooks/todo-enforcer";
 import { registerCommentChecker } from "./hooks/comment-checker";
 import { registerIntentGate } from "./hooks/intent-gate";
-import { registerHonchoTools } from "./honcho-tools";
+import { registerTodoEnforcer } from "./hooks/todo-enforcer";
+import { registerLoopCommands } from "./loop/commands";
+import { LoopRuntime } from "./loop/runtime";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SKILLS_DIR = path.resolve(HERE, "../../skills");
@@ -50,8 +49,6 @@ export default async function (pi: ExtensionAPI): Promise<void> {
 	pi.on("session_switch", (_event, ctx) => runtime.attach(ctx));
 	pi.on("session_branch", (_event, ctx) => runtime.attach(ctx));
 	pi.on("agent_end", (event, ctx) => runtime.onAgentEnd(event, ctx));
-
-	await registerHonchoTools(pi);
 
 	registerLoopCommands(pi, runtime);
 

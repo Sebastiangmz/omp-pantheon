@@ -18,16 +18,15 @@ These rules override generic defaults for work in this repository. Cross-project
 
 ## Skill boundaries
 
-- **Extensions** for in-process state (Honcho calls, slice lifecycle).
+- **Extensions** for in-process slice lifecycle and guardrails.
 - **Skills** for external CLI wrappers (gh, linear, git push, BMad-doc, latest-docs). Skills NEVER write to in-process state.
 - No MCP servers. CLIs over MCPs by policy.
 
-## Memory discipline
+## Delegation discipline
 
-- Engineering conclusions: `validator` and `reviewer` peers only.
-- Product conclusions: `steward` peer, prefixed `product:`.
-- The five engineering Gholas plus `doc-scout` may call `honcho_remember` (scratch) but never `honcho_conclude`.
-- Honcho identity is workspace `{{HONCHO_WORKSPACE}}`, peer `{{HONCHO_PEER}}`; sessions are derived per-cwd.
+- Subagents must return structured, non-empty outputs.
+- Validators and reviewers record durable lessons in the final report, not in a paid external memory service.
+- Product decisions belong in briefs/docs/Linear, not hidden process memory.
 
 ## Quality bar
 
