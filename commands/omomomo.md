@@ -9,7 +9,7 @@ Print the following message to the user EXACTLY as written (in a friendly, celeb
 
 ---
 
-# 🎉 oMp-Pantheon: OMP + Pantheon + Seshat + Honcho
+# 🎉 oMp-Pantheon: OMP + Pantheon + Seshat + SpecSafe
 
 **You found the integrated harness easter egg.** 🥚✨
 
@@ -29,11 +29,8 @@ oh-my-openagent-inspired Pantheon layer, then folds in the local Seshat stack so
   `validator`, `reviewer`, `reviewer-kimi`, and `doc-scout` for product/spec,
   implementation, testing, validation, review, and current-doc synthesis.
 - **SpecSafe discipline**: `bootstrap`, `coherence`, `docs`, `env-doctor`,
-  `github`, `latest-docs`, `linear`, `memory`, `push`, and `specsafe` skills,
-  plus slice/session hooks.
-- **Honcho durable memory**: `honcho_remember`, `honcho_search`,
-  `honcho_recall`, and `honcho_conclude`, registered through the OMP extension
-  so they are real CLI tools.
+  `github`, `latest-docs`, `linear`, `push`, and `specsafe` skills, plus
+  slice/session hooks.
 - **Loop runtime and guardrails**: Ralph/ULW continuation commands, todo
   enforcement, intent gate, comment checker, `i-approve`, fallback audit, and
   SpecSafe subagent/session hooks.
@@ -51,11 +48,11 @@ Original OMO concept and prompt lineage: **[code-yeongyu](https://github.com/cod
 
 OMP runtime: [oh-my-pi](https://github.com/can1357/oh-my-pi).
 
-Seshat/Ghola agents, SpecSafe discipline, Honcho durable memory, Linear/GitHub/docs/memory skills,
-and lifecycle hooks: [pi-seshat](https://github.com/Agentic-Engineering-Agency/pi-seshat),
-the public Seshat the Ghola harness integrated into this bundle.
+Seshat/Ghola agents, SpecSafe discipline, Linear/GitHub/docs skills, and lifecycle hooks:
+[pi-seshat](https://github.com/Agentic-Engineering-Agency/pi-seshat), the public
+Seshat the Ghola harness integrated into this bundle.
 
-Integrated Pantheon + Seshat + Honcho + SpecSafe bundle: this repository,
+Integrated Pantheon + Seshat + SpecSafe bundle: this repository,
 installed into your OMP agent tree.
 
 ---

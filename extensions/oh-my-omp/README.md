@@ -3,7 +3,7 @@
 Integrated OMP extension for Sebastián's `omp-pantheon` bundle. It started as an
 [oh-my-openagent (OMO)](https://github.com/code-yeongyu/oh-my-openagent) port
 onto [oh-my-pi (OMP)](https://github.com/can1357/oh-my-pi), and now also wires
-the Seshat/SpecSafe/Honcho runtime into the local harness.
+the Seshat/SpecSafe runtime into the local harness.
 
 ## What's in this bundle
 
@@ -12,8 +12,6 @@ the Seshat/SpecSafe/Honcho runtime into the local harness.
 - Owns the **Ralph / ULW loop runtime** (state machine driven by `agent_end`).
 - Registers extension commands: `/ralph-loop`, `/ulw-loop`, `/cancel-ralph`,
   `/stop-continuation`.
-- Registers Honcho durable-memory tools through `ExtensionAPI.registerTool`:
-  `honcho_recall`, `honcho_search`, `honcho_remember`, `honcho_conclude`.
 - Registers lifecycle guardrails: `todo-enforcer`, `comment-checker`, and
   `intent-gate`.
 
@@ -36,13 +34,11 @@ the Seshat/SpecSafe/Honcho runtime into the local harness.
   `hyperplan`, `playwright`, `playwright-cli`, `remove-deadcode`,
   `review-work`, `security-research`, `tech-debt-audit`.
 - Seshat/SpecSafe: `bootstrap`, `coherence`, `docs`, `env-doctor`, `github`,
-  `latest-docs`, `linear`, `memory`, `push`, `specsafe`.
+  `latest-docs`, `linear`, `push`, `specsafe`.
 
-### Hooks and tools
+### Hooks
 - Agent hooks: `specsafe-session`, `specsafe-subagents`, `i-approve`,
   `fallback-audit`.
-- Custom tool source: `tools/honcho/index.ts`, adapted into extension tools by
-  `honcho-tools.ts`.
 
 ## Source attribution
 
@@ -50,10 +46,9 @@ Original OMO prompt content and concept:
 [code-yeongyu/oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)
 (SUL-1.0).
 
-Seshat/Ghola agents, SpecSafe hooks/skills, Honcho durable-memory tooling, and
-Linear/GitHub/docs/memory skills come from
-[pi-seshat](https://github.com/Agentic-Engineering-Agency/pi-seshat), the public
-Seshat the Ghola harness integrated into this bundle.
+Seshat/Ghola agents, SpecSafe hooks/skills, and Linear/GitHub/docs skills come
+from [pi-seshat](https://github.com/Agentic-Engineering-Agency/pi-seshat), the
+public Seshat the Ghola harness integrated into this bundle.
 
 This is a personal-config-tree port, not a redistribution. If this is ever
 published as an installable package, licensing will be re-evaluated then.
