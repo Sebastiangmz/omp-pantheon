@@ -88,8 +88,8 @@ function makeBaseOpts(
 	};
 }
 
-/** Write .pi/.honcho-state.json with optional slice */
-function writeHonchoState(tmpDir: string, sliceId: string | null): void {
+/** Write .pi/.specsafe-state.json with optional slice */
+function writeSpecSafeState(tmpDir: string, sliceId: string | null): void {
 	const piDir = path.join(tmpDir, ".pi");
 	fs.mkdirSync(piDir, { recursive: true });
 	const state = {
@@ -100,8 +100,8 @@ function writeHonchoState(tmpDir: string, sliceId: string | null): void {
 					sessionId: "sess-test",
 					beganAt: "2026-04-24T14:00:00Z",
 					costCounter: {
-						honchoCalls: 0,
-						honchoCost: 0,
+						externalMemoryCalls: 0,
+						externalMemoryCost: 0,
 						subagentTokens: {
 							input: 0,
 							output: 0,
@@ -116,7 +116,7 @@ function writeHonchoState(tmpDir: string, sliceId: string | null): void {
 		history: [],
 	};
 	fs.writeFileSync(
-		path.join(piDir, ".honcho-state.json"),
+		path.join(piDir, ".specsafe-state.json"),
 		JSON.stringify(state, null, 2),
 		{ mode: 0o600 },
 	);
@@ -705,7 +705,7 @@ describe("[unit] docs apply --i-approve — stub git", () => {
 	});
 
 	test("with open slice: commit includes Spec-Slice: trailer", async () => {
-		writeHonchoState(tmpDir, "SPEC-20260424-004");
+		writeSpecSafeState(tmpDir, "SPEC-20260424-004");
 
 		const gitCalls: GitCall[] = [];
 		const gitRunner: DispatchOpts["gitRunner"] = (args, opts) => {
@@ -735,8 +735,8 @@ describe("[unit] docs apply --i-approve — stub git", () => {
 		expect(commitMsg).toContain("Spec-Slice: SPEC-20260424-004");
 	});
 
-	test("without honcho state file: commit omits Spec-Slice: trailer", async () => {
-		// No .honcho-state.json written
+	test("without SpecSafe state file: commit omits Spec-Slice: trailer", async () => {
+		// No .specsafe-state.json written
 		const gitCalls: GitCall[] = [];
 		const gitRunner: DispatchOpts["gitRunner"] = (args, opts) => {
 			gitCalls.push({ args, cwd: opts.cwd });
@@ -766,7 +766,7 @@ describe("[unit] docs apply --i-approve — stub git", () => {
 	});
 
 	test("with currentSlice null: commit omits Spec-Slice: trailer", async () => {
-		writeHonchoState(tmpDir, null);
+		writeSpecSafeState(tmpDir, null);
 
 		const gitCalls: GitCall[] = [];
 		const gitRunner: DispatchOpts["gitRunner"] = (args, opts) => {
@@ -873,8 +873,8 @@ describe("[integration] AC9 — full propose → apply lifecycle", () => {
 		expect(patched).toContain("Added by steward.");
 	});
 
-	test("with honcho state open slice: commit includes Spec-Slice:", async () => {
-		writeHonchoState(tmpDir, "SPEC-20260424-004");
+	test("with SpecSafe state open slice: commit includes Spec-Slice:", async () => {
+		writeSpecSafeState(tmpDir, "SPEC-20260424-004");
 
 		const diff = `--- a/docs/PRD.md
 +++ b/docs/PRD.md
@@ -903,8 +903,8 @@ describe("[integration] AC9 — full propose → apply lifecycle", () => {
 		expect(log.stdout).toContain("Approved-By: luci");
 	});
 
-	test("without honcho state file: commit omits Spec-Slice:", async () => {
-		// No .honcho-state.json
+	test("without SpecSafe state file: commit omits Spec-Slice:", async () => {
+		// No .specsafe-state.json
 
 		const diff = `--- a/docs/PRD.md
 +++ b/docs/PRD.md

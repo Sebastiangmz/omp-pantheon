@@ -18,8 +18,6 @@
  * WARNING: These pin tests depend on .pi/extensions/... existing as canonical.
  * If .pi/ is decommissioned (slice-009), update or delete the pin tests.
  *
- * Note: CONCLUSION_WRITERS is NOT inlined here — docs skill does not use it.
- * Only memory skill inlines CONCLUSION_WRITERS (see memory/bin/_specsafe-state.ts).
  */
 
 import * as fs from "node:fs";
@@ -30,8 +28,8 @@ import * as path from "node:path";
 // ---------------------------------------------------------------------------
 
 export type CostCounter = {
-	honchoCalls: number;
-	honchoCost: number;
+	externalMemoryCalls: number;
+	externalMemoryCost: number;
 	subagentTokens: {
 		input: number;
 		output: number;
@@ -66,7 +64,7 @@ export type StateFile = {
 };
 
 export function statePathFor(cwd: string): string {
-	return path.join(cwd, ".pi", ".honcho-state.json");
+	return path.join(cwd, ".pi", ".specsafe-state.json");
 }
 
 export function readStateFileOrNull(filePath: string): StateFile | null {

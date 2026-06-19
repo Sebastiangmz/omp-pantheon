@@ -13,8 +13,8 @@ import {
 
 const cliPath = path.resolve(process.cwd(), "skills/specsafe/bin/specsafe.ts");
 const expectedZeroCostCounter: CostCounter = {
-	honchoCalls: 0,
-	honchoCost: 0,
+	externalMemoryCalls: 0,
+	externalMemoryCost: 0,
 	subagentTokens: {
 		input: 0,
 		output: 0,
@@ -190,7 +190,7 @@ describe("[unit] specsafe CLI lifecycle", () => {
 		const entries = fs.readdirSync(path.join(tempDir, ".pi"));
 		expect(
 			entries.some((entry) =>
-				/^\.honcho-state\.json\.corrupt-\d+$/.test(entry),
+				/^\.specsafe-state\.json\.corrupt-\d+$/.test(entry),
 			),
 		).toBe(true);
 		const state = readState();

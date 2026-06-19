@@ -4,7 +4,7 @@
  *
  * SpecSafe slice: SPEC-20260427-009 — omp-slice-lifecycle
  *
- * Mutates `.pi/.honcho-state.json` to begin/end/inspect SpecSafe slices.
+ * Mutates `.pi/.specsafe-state.json` to begin/end/inspect SpecSafe slices.
  * State-file shape is bit-identical to .pi/extensions/specsafe-session/index.ts;
  * types are imported from .omp/hooks/specsafe-session so any drift is caught
  * by the type checker.
@@ -40,8 +40,8 @@ const USAGE = [
 
 function freshCostCounter(): CostCounter {
 	return {
-		honchoCalls: 0,
-		honchoCost: 0,
+		externalMemoryCalls: 0,
+		externalMemoryCost: 0,
 		subagentTokens: {
 			input: 0,
 			output: 0,

@@ -38,7 +38,7 @@ Re-runs all checks and, if all pass, executes the push and appends one JSON line
 2. Local branch is ahead of remote tracking branch and not behind (not diverged, not at parity).
 3. Not on `main`/`master` unless `--allow-main` is also passed.
 4. At least one commit in the push range carries a `Spec-Slice:` trailer.
-5. `.pi/.honcho-state.json` has `currentSlice === null` (no open slice).
+5. `.pi/.specsafe-state.json` has `currentSlice === null` (no open slice).
 
 Any failed check aborts non-zero with a `[fail]` message. Fix each issue before re-running.
 

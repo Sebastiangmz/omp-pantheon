@@ -165,7 +165,7 @@ describe("[unit] state file — readStateFileOrNull", () => {
 		expect(s).toBeNull();
 		const entries = fs.readdirSync(path.join(projectDir, ".pi"));
 		expect(
-			entries.some((f) => f.startsWith(".honcho-state.json.corrupt-")),
+			entries.some((f) => f.startsWith(".specsafe-state.json.corrupt-")),
 		).toBe(true);
 		expect(fs.existsSync(sp)).toBe(false);
 	});
@@ -178,8 +178,8 @@ describe("[unit] state file — readStateFileOrNull", () => {
 				sessionId: "sess-1",
 				beganAt: new Date().toISOString(),
 				costCounter: {
-					honchoCalls: 0,
-					honchoCost: 0,
+					externalMemoryCalls: 0,
+					externalMemoryCost: 0,
 					subagentTokens: {
 						input: 0,
 						output: 0,
@@ -204,11 +204,10 @@ describe("[unit] state file — readStateFileOrNull", () => {
 // ---------------------------------------------------------------------------
 // [unit] statePathFor parity — canonical vs inlined skill copies
 //
-// These tests import the canonical OMP hook and the inlined skill copies:
+// These tests import the canonical OMP hook and the inlined docs skill copy:
 //   hooks/specsafe-session.ts
-//   skills/memory/bin/_specsafe-state.ts
 //   skills/docs/bin/_specsafe-state.ts
-// They catch drift between the hook and skill helper copies at the test boundary.
+// They catch drift between the hook and skill helper copy at the test boundary.
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
@@ -228,13 +227,6 @@ async function loadCanonical(): Promise<{
 	return import("../hooks/specsafe-session");
 }
 
-async function loadMemoryInlined(): Promise<{
-	statePathFor: StatePathFn;
-	readStateFileOrNull: ReadStateFn;
-}> {
-	return import("../skills/memory/bin/_specsafe-state.ts");
-}
-
 async function loadDocsInlined(): Promise<{
 	statePathFor: StatePathFn;
 	readStateFileOrNull: ReadStateFn;
@@ -250,12 +242,6 @@ describe("[unit] statePathFor parity", () => {
 	];
 
 	for (const { label, cwd } of cases) {
-		test(`canonical === memory inlined: ${label}`, async () => {
-			const { statePathFor: canon } = await loadCanonical();
-			const { statePathFor: memInlined } = await loadMemoryInlined();
-			expect(memInlined(cwd)).toBe(canon(cwd));
-		});
-
 		test(`canonical === docs inlined: ${label}`, async () => {
 			const { statePathFor: canon } = await loadCanonical();
 			const { statePathFor: docsInlined } = await loadDocsInlined();
@@ -278,19 +264,16 @@ describe("[unit] readStateFileOrNull parity", () => {
 		} catch {}
 	});
 
-	test("non-existent file: all three return null", async () => {
+	test("non-existent file: both readers return null", async () => {
 		const { readStateFileOrNull: canon } = await loadCanonical();
-		const { readStateFileOrNull: memInlined } = await loadMemoryInlined();
 		const { readStateFileOrNull: docsInlined } = await loadDocsInlined();
 		const filePath = path.join(tmpDir, ".pi", "nonexistent.json");
 		expect(canon(filePath)).toBeNull();
-		expect(memInlined(filePath)).toBeNull();
 		expect(docsInlined(filePath)).toBeNull();
 	});
 
-	test("well-formed JSON: all three return structurally-equal StateFile", async () => {
+	test("well-formed JSON: both readers return structurally-equal StateFile", async () => {
 		const { readStateFileOrNull: canon } = await loadCanonical();
-		const { readStateFileOrNull: memInlined } = await loadMemoryInlined();
 		const { readStateFileOrNull: docsInlined } = await loadDocsInlined();
 		const fixture = {
 			currentSlice: {
@@ -299,8 +282,8 @@ describe("[unit] readStateFileOrNull parity", () => {
 				sessionId: "sess-parity",
 				beganAt: "2026-04-26T10:00:00Z",
 				costCounter: {
-					honchoCalls: 5,
-					honchoCost: 0.001,
+					externalMemoryCalls: 5,
+					externalMemoryCost: 0.001,
 					subagentTokens: {
 						input: 1000,
 						output: 200,
@@ -313,59 +296,42 @@ describe("[unit] readStateFileOrNull parity", () => {
 			},
 			history: [],
 		};
-		const filePath = path.join(tmpDir, ".pi", ".honcho-state.json");
+		const filePath = path.join(tmpDir, ".pi", ".specsafe-state.json");
 		fs.writeFileSync(filePath, JSON.stringify(fixture), { mode: 0o600 });
 
 		const canonical = canon(filePath);
 		fs.writeFileSync(filePath, JSON.stringify(fixture), { mode: 0o600 });
-		const memoryInlined = memInlined(filePath);
-		fs.writeFileSync(filePath, JSON.stringify(fixture), { mode: 0o600 });
 		const docsInlinedResult = docsInlined(filePath);
 
 		expect(canonical).not.toBeNull();
-		expect(JSON.stringify(memoryInlined)).toBe(JSON.stringify(canonical));
 		expect(JSON.stringify(docsInlinedResult)).toBe(JSON.stringify(canonical));
 	});
 
-	test("malformed JSON: all three return null AND quarantine the file", async () => {
+	test("malformed JSON: both return null AND quarantine the file", async () => {
 		const { readStateFileOrNull: canon } = await loadCanonical();
-		const { readStateFileOrNull: memInlined } = await loadMemoryInlined();
 		const { readStateFileOrNull: docsInlined } = await loadDocsInlined();
 
 		// Each needs its own file since quarantine renames happen once per path.
 		const dirs = [
 			fs.mkdtempSync(path.join(os.tmpdir(), "omp-parity-corrupt-canonical-")),
-			fs.mkdtempSync(path.join(os.tmpdir(), "omp-parity-corrupt-memory-")),
 			fs.mkdtempSync(path.join(os.tmpdir(), "omp-parity-corrupt-docs-")),
 		];
 		try {
 			const paths = dirs.map((d) => {
 				fs.mkdirSync(path.join(d, ".pi"), { recursive: true });
-				const p = path.join(d, ".pi", ".honcho-state.json");
+				const p = path.join(d, ".pi", ".specsafe-state.json");
 				fs.writeFileSync(p, "{not valid json", { mode: 0o600 });
 				return p;
 			});
 
-			const [canonicalPath, memoryPath, docsPath] = paths as [
-				string,
-				string,
-				string,
-			];
+			const [canonicalPath, docsPath] = paths as [string, string];
 
 			expect(canon(canonicalPath)).toBeNull();
 			expect(fs.existsSync(canonicalPath)).toBe(false);
 			expect(
 				fs
 					.readdirSync(path.dirname(canonicalPath))
-					.some((f) => f.startsWith(".honcho-state.json.corrupt-")),
-			).toBe(true);
-
-			expect(memInlined(memoryPath)).toBeNull();
-			expect(fs.existsSync(memoryPath)).toBe(false);
-			expect(
-				fs
-					.readdirSync(path.dirname(memoryPath))
-					.some((f) => f.startsWith(".honcho-state.json.corrupt-")),
+					.some((f) => f.startsWith(".specsafe-state.json.corrupt-")),
 			).toBe(true);
 
 			expect(docsInlined(docsPath)).toBeNull();
@@ -373,7 +339,7 @@ describe("[unit] readStateFileOrNull parity", () => {
 			expect(
 				fs
 					.readdirSync(path.dirname(docsPath))
-					.some((f) => f.startsWith(".honcho-state.json.corrupt-")),
+					.some((f) => f.startsWith(".specsafe-state.json.corrupt-")),
 			).toBe(true);
 		} finally {
 			for (const d of dirs) {
@@ -399,9 +365,8 @@ describe("[unit] StateFile shape parity", () => {
 		} catch {}
 	});
 
-	test("fixture written once, all three readers return JSON.stringify-equal results", async () => {
+	test("fixture written once, both readers return JSON.stringify-equal results", async () => {
 		const { readStateFileOrNull: canon } = await loadCanonical();
-		const { readStateFileOrNull: memInlined } = await loadMemoryInlined();
 		const { readStateFileOrNull: docsInlined } = await loadDocsInlined();
 		const fixture = {
 			currentSlice: {
@@ -410,8 +375,8 @@ describe("[unit] StateFile shape parity", () => {
 				sessionId: "sess-shape",
 				beganAt: "2026-04-26T12:00:00Z",
 				costCounter: {
-					honchoCalls: 3,
-					honchoCost: 0.0006,
+					externalMemoryCalls: 3,
+					externalMemoryCost: 0.0006,
 					subagentTokens: {
 						input: 500,
 						output: 100,
@@ -431,8 +396,8 @@ describe("[unit] StateFile shape parity", () => {
 					endedAt: "2026-04-25T11:00:00Z",
 					outcome: "PASS",
 					costSummary: {
-						honchoCalls: 1,
-						honchoCost: 0.0002,
+						externalMemoryCalls: 1,
+						externalMemoryCost: 0.0002,
 						subagentTokens: {
 							input: 200,
 							output: 50,
@@ -445,13 +410,11 @@ describe("[unit] StateFile shape parity", () => {
 				},
 			],
 		};
-		const filePath = path.join(tmpDir, ".pi", ".honcho-state.json");
+		const filePath = path.join(tmpDir, ".pi", ".specsafe-state.json");
 		fs.writeFileSync(filePath, JSON.stringify(fixture), { mode: 0o600 });
 
 		const canonicalResult = canon(filePath);
 		// Re-write fixture between reads (read doesn't consume, but ensures isolation)
-		fs.writeFileSync(filePath, JSON.stringify(fixture), { mode: 0o600 });
-		const memoryInlinedResult = memInlined(filePath);
 		fs.writeFileSync(filePath, JSON.stringify(fixture), { mode: 0o600 });
 		const docsInlinedResult = docsInlined(filePath);
 
@@ -459,9 +422,6 @@ describe("[unit] StateFile shape parity", () => {
 		expect(canonicalResult).toHaveProperty("currentSlice");
 		expect(canonicalResult).toHaveProperty("history");
 
-		expect(JSON.stringify(memoryInlinedResult)).toBe(
-			JSON.stringify(canonicalResult),
-		);
 		expect(JSON.stringify(docsInlinedResult)).toBe(
 			JSON.stringify(canonicalResult),
 		);

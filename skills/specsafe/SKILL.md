@@ -1,11 +1,11 @@
 ---
 name: specsafe
-description: Slice lifecycle CLI for SpecSafe — begin, end, and inspect the open slice in `.pi/.honcho-state.json`.
+description: Slice lifecycle CLI for SpecSafe — begin, end, and inspect the open slice in `.pi/.specsafe-state.json`.
 ---
 
 # specsafe skill
 
-Manages the SpecSafe slice lifecycle by mutating `.pi/.honcho-state.json` in the current working directory. State-file shape is identical to the vanilla-Pi `.pi/extensions/specsafe-session` extension; types are imported from `.omp/hooks/specsafe-session` so drift is caught by `tsc`.
+Manages the SpecSafe slice lifecycle by mutating `.pi/.specsafe-state.json` in the current working directory. State-file shape is identical to the vanilla-Pi `.pi/extensions/specsafe-session` extension; types are imported from `.omp/hooks/specsafe-session` so drift is caught by `tsc`.
 
 ## Subcommands
 
@@ -51,7 +51,7 @@ no slice open
 
 ## State file
 
-- Path: `.pi/.honcho-state.json` (resolved via `statePathFor(process.cwd())`).
+- Path: `.pi/.specsafe-state.json` (resolved via `statePathFor(process.cwd())`).
 - Mode: `0600`, enforced after every write.
 - Atomic write: temp file `<path>.tmp-<pid>-<ts>` + `renameSync` + explicit `chmodSync`.
 - Corrupt JSON is quarantined as `<path>.corrupt-<timestamp>` (via `readStateFileOrNull`); the CLI then proceeds as if state were empty.
@@ -66,4 +66,4 @@ no slice open
 
 ## Implementation notes
 
-This CLI is the Oh My Pi counterpart to the vanilla-Pi `specsafe_begin`/`specsafe_end`/`specsafe_status` ExtensionAPI tools registered by `.pi/extensions/specsafe-session/index.ts`. Both writers target the same on-disk state file so an operator can switch between runtimes within a single slice. The CLI does not mutate the cost counter — that is the honcho tool's responsibility (see `bumpHonchoCallCounter` in `.pi/extensions/honcho`).
+This CLI is the Oh My Pi counterpart to the vanilla-Pi `specsafe_begin`/`specsafe_end`/`specsafe_status` ExtensionAPI tools registered by `.pi/extensions/specsafe-session/index.ts`. Both writers target the same on-disk state file so an operator can switch between runtimes within a single slice. The CLI initializes but does not mutate the cost counter; external memory accounting is not included in this public bundle.

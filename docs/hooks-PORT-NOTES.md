@@ -10,7 +10,7 @@ are in the header comments of each ported file.
 
 **Ported faithfully**
 - `StateFile`/`CurrentSlice`/`HistoryEntry`/`CostCounter` shapes
-- `statePathFor(cwd)` — same `.pi/.honcho-state.json` location
+- `statePathFor(cwd)` — same `.pi/.specsafe-state.json` location
 - `readStateFileOrNull` — same corrupt-quarantine semantics
 
 **Dropped / adapted**
@@ -20,12 +20,9 @@ are in the header comments of each ported file.
   events. The slice-lifecycle tool surface stays in `.pi/` for the
   vanilla-Pi runtime. The `.omp/` hook only **reads** the state file and
   emits a trailer block on `session_shutdown` when a slice is open.
-- **No CostCounter mutation.** The original session extension does not
-  mutate the counter either — increments come from `.pi/extensions/honcho/index.ts:65-66`.
-  The Oh My Pi port preserves the counter shape but does not introduce
-  token accumulation: doing so would be a fabricated feature. If/when the
-  Honcho extension itself is ported to `.omp/`, the increment site moves
-  with it.
+- **No CostCounter mutation.** The Oh My Pi port preserves the counter shape but
+  does not introduce token or paid-memory accumulation: doing so would be a
+  fabricated feature in this public bundle.
 
 ## specsafe-subagents.ts
 
@@ -42,26 +39,21 @@ are in the header comments of each ported file.
   the source is authoritative.
 
 **Dropped — does not have a clean port**
-- **Per-spawn child env injection** (`HONCHO_PEER_ID`,
-  `HONCHO_WORKSPACE_ID`, `HONCHO_SESSION_ID`, `SPECSAFE_SLICE_ID`).
-  Vanilla Pi shipped its own `subagent` tool that called `child_process.spawn`
-  with a per-call `env` object computed from the active slice + agent
-  name. Oh My Pi has its own bundled `task` tool whose subprocess we do
-  NOT control from a hook — there is no per-spawn env-injection seam
-  exposed by `HookAPI`. Setting `process.env.HONCHO_*` globally at
-  `session_start` is NOT equivalent: it would leak across every
-  subprocess Oh My Pi spawns and lose the per-agent `HONCHO_PEER_ID`.
-  Per the porting rules, fabricating an API is forbidden; this piece is
-  intentionally not ported.
+- **Per-spawn child env injection** (`SPECSAFE_SLICE_ID` and per-agent
+  identity). Vanilla Pi shipped its own `subagent` tool that called
+  `child_process.spawn` with a per-call `env` object computed from the active
+  slice + agent name. Oh My Pi has its own bundled `task` tool whose subprocess
+  we do NOT control from a hook — there is no per-spawn env-injection seam
+  exposed by `HookAPI`. Setting global process env at `session_start` is NOT
+  equivalent: it would leak across every subprocess Oh My Pi spawns and lose
+  per-agent identity. Per the porting rules, fabricating an API is forbidden;
+  this piece is intentionally not ported.
 
   **Workarounds available to the operator:**
-  1. Export `HONCHO_WORKSPACE_ID` / `HONCHO_SESSION_ID` in shell
-     before launching `omp` while a slice is open — children inherit it.
-  2. Re-author the Oh My Pi `task` agents (`.omp/agents/*.md`) so each
-     agent's system prompt resolves its own peer id from the session id
-     it sees on disk.
-  3. Patch upstream `@oh-my-pi/pi-coding-agent` to expose a
-     pre-spawn-env hook. Out of scope for this port.
+  1. Re-author the Oh My Pi `task` agents (`.omp/agents/*.md`) so each agent
+     declares its own peer id in its final report.
+  2. Patch upstream `@oh-my-pi/pi-coding-agent` to expose a pre-spawn-env hook.
+     Out of scope for this port.
 
 ## Tests
 

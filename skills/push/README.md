@@ -32,7 +32,7 @@ All five must pass; any failure aborts with a `[fail]` prefix on stderr and exit
 | 2 | Ahead of remote, not diverged | Local is behind or at parity with remote tracking branch |
 | 3 | Not on main/master | On a protected branch without `--allow-main` |
 | 4 | Spec-Slice: trailer present | No commit in push range contains a `Spec-Slice:` git trailer |
-| 5 | No open slice | `.pi/.honcho-state.json` has `currentSlice != null` |
+| 5 | No open slice | `.pi/.specsafe-state.json` has `currentSlice != null` |
 
 ## Exit behavior
 
