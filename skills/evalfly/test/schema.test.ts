@@ -4,6 +4,9 @@ import {
 	type EvalCase,
 	type EvalConfig,
 	type EvalRun,
+	EvalCaseSchema,
+	EvalConfigSchema,
+	EvalRunSchema,
 	validateEvalCase,
 	validateEvalConfig,
 	validateEvalRun,
@@ -44,6 +47,17 @@ const validConfig: EvalConfig = {
 };
 
 describe("evalfly schema validation", () => {
+	test("exports versioned schemas for config case and run", () => {
+		expect(EvalConfigSchema.properties.schema_version.const).toBe(
+			"evalfly.config.v1",
+		);
+		expect(EvalCaseSchema.properties.schema_version.const).toBe(
+			"evalfly.case.v1",
+		);
+		expect(EvalRunSchema.properties.schema_version.const).toBe("evalfly.run.v1");
+		expect(EvalCaseSchema.required).toContain("privacy");
+	});
+
 	test("valid config and case pass", () => {
 		expect(validateEvalCase(validCase)).toEqual({ ok: true, value: validCase });
 		expect(validateEvalConfig(validConfig)).toEqual({
@@ -85,21 +99,36 @@ describe("evalfly schema validation", () => {
 		expect(result.ok).toBe(true);
 	});
 
-	test("run summary validates with critical_regressions count", () => {
+	test("run schema validates CLI run records", () => {
 		const run: EvalRun = {
 			schema_version: "evalfly.run.v1",
 			run_id: "run-2026-06-19-smoke",
+			suite: "smoke",
 			config_name: validConfig.name,
-			started_at: "2026-06-19T00:00:00.000Z",
-			finished_at: "2026-06-19T00:01:00.000Z",
+			created_at: "2026-06-19T00:00:00.000Z",
+			results: [
+				{
+					case_id: validCase.case_id,
+					title: validCase.title,
+					risk_tier: "critical",
+					critical: true,
+					passed: false,
+					privacy: validCase.privacy,
+					errors: ["missing file: reports/evalfly/summary.md"],
+				},
+			],
 			summary: {
 				total: 1,
 				passed: 0,
 				failed: 1,
 				critical_regressions: 1,
 			},
+			verdict: "fail",
 		};
 
+		expect(EvalRunSchema.required).toContain("created_at");
+		expect(EvalRunSchema.required).toContain("results");
+		expect(EvalRunSchema.required).toContain("verdict");
 		expect(validateEvalRun(run)).toEqual({ ok: true, value: run });
 	});
 });
