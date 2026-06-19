@@ -24,10 +24,19 @@ const validCase = {
 	},
 } as const;
 
-async function makeProject(config: unknown = { schema_version: "evalfly.config.v1", name: "Smoke suite", cases: [validCase] }) {
+async function makeProject(
+	config: unknown = {
+		schema_version: "evalfly.config.v1",
+		name: "Smoke suite",
+		cases: [validCase],
+	},
+) {
 	const cwd = await mkdtemp(join(tmpdir(), "evalfly-"));
 	await mkdir(join(cwd, "evals"), { recursive: true });
-	await writeFile(join(cwd, "evals", "config.json"), JSON.stringify(config, null, 2));
+	await writeFile(
+		join(cwd, "evals", "config.json"),
+		JSON.stringify(config, null, 2),
+	);
 	return cwd;
 }
 
@@ -55,10 +64,14 @@ describe("evalfly CLI", () => {
 
 	test("CLI entrypoint validates a project cwd", async () => {
 		const cwd = await makeProject();
-		const result = spawnSync(process.execPath, [join(import.meta.dir, "..", "bin", "evalfly.ts"), "validate"], {
-			cwd,
-			encoding: "utf8",
-		});
+		const result = spawnSync(
+			process.execPath,
+			[join(import.meta.dir, "..", "bin", "evalfly.ts"), "validate"],
+			{
+				cwd,
+				encoding: "utf8",
+			},
+		);
 
 		expect(result.status).toBe(0);
 		expect(result.stderr).toBe("");
@@ -90,17 +103,31 @@ describe("evalfly CLI", () => {
 		});
 
 		expect(result.exitCode).toBe(0);
-		const run = JSON.parse(await readFile(join(cwd, "evals", "runs", "run-smoke-test.json"), "utf8"));
+		const run = JSON.parse(
+			await readFile(join(cwd, "evals", "runs", "run-smoke-test.json"), "utf8"),
+		);
 		expect(run.schema_version).toBe("evalfly.run.v1");
 		expect(run.run_id).toBe("run-smoke-test");
 		expect(run.suite).toBe("smoke");
 		expect(run.created_at).toBe("2026-06-19T12:00:00.000Z");
-		expect(run.summary).toEqual({ total: 1, passed: 1, failed: 0, critical_regressions: 0 });
+		expect(run.summary).toEqual({
+			total: 1,
+			passed: 1,
+			failed: 0,
+			critical_regressions: 0,
+		});
 		expect(run.verdict).toBe("pass");
-		expect(run.results[0]).toMatchObject({ case_id: "critical-file-exists", passed: true, critical: true });
+		expect(run.results[0]).toMatchObject({
+			case_id: "critical-file-exists",
+			passed: true,
+			critical: true,
+		});
 		expect(validateEvalRun(run).ok).toBe(true);
 
-		const report = await readFile(join(cwd, "evals", "reports", "run-smoke-test.md"), "utf8");
+		const report = await readFile(
+			join(cwd, "evals", "reports", "run-smoke-test.md"),
+			"utf8",
+		);
 		expect(report).toContain("Suite: smoke");
 		expect(report).toContain("Passed: 1");
 		expect(report).toContain("Failed: 0");
@@ -119,7 +146,12 @@ describe("evalfly CLI", () => {
 		});
 
 		expect(result.exitCode).toBe(1);
-		const run = JSON.parse(await readFile(join(cwd, "evals", "runs", "run-missing-critical.json"), "utf8"));
+		const run = JSON.parse(
+			await readFile(
+				join(cwd, "evals", "runs", "run-missing-critical.json"),
+				"utf8",
+			),
+		);
 		expect(run.verdict).toBe("fail");
 		expect(run.summary.critical_regressions).toBe(1);
 		expect(run.results[0]).toMatchObject({ passed: false, critical: true });
@@ -150,9 +182,13 @@ describe("evalfly CLI", () => {
 		});
 
 		expect(result.exitCode).toBe(1);
-		const run = JSON.parse(await readFile(join(cwd, "evals", "runs", "run-traversal.json"), "utf8"));
+		const run = JSON.parse(
+			await readFile(join(cwd, "evals", "runs", "run-traversal.json"), "utf8"),
+		);
 		expect(run.results[0]).toMatchObject({ passed: false, critical: true });
-		expect(run.results[0].errors.join("\n")).toContain("file_exists path must stay within cwd");
+		expect(run.results[0].errors.join("\n")).toContain(
+			"file_exists path must stay within cwd",
+		);
 	});
 
 	test("file_exists absolute path fails without probing outside files", async () => {
@@ -179,9 +215,13 @@ describe("evalfly CLI", () => {
 		});
 
 		expect(result.exitCode).toBe(1);
-		const run = JSON.parse(await readFile(join(cwd, "evals", "runs", "run-absolute.json"), "utf8"));
+		const run = JSON.parse(
+			await readFile(join(cwd, "evals", "runs", "run-absolute.json"), "utf8"),
+		);
 		expect(run.results[0]).toMatchObject({ passed: false, critical: true });
-		expect(run.results[0].errors.join("\n")).toContain("file_exists path must stay within cwd");
+		expect(run.results[0].errors.join("\n")).toContain(
+			"file_exists path must stay within cwd",
+		);
 	});
 
 	test("file_exists symlink escape outside cwd fails without probing outside files", async () => {
@@ -209,9 +249,16 @@ describe("evalfly CLI", () => {
 		});
 
 		expect(result.exitCode).toBe(1);
-		const run = JSON.parse(await readFile(join(cwd, "evals", "runs", "run-symlink-escape.json"), "utf8"));
+		const run = JSON.parse(
+			await readFile(
+				join(cwd, "evals", "runs", "run-symlink-escape.json"),
+				"utf8",
+			),
+		);
 		expect(run.results[0]).toMatchObject({ passed: false, critical: true });
-		expect(run.results[0].errors.join("\n")).toContain("file_exists path must stay within cwd");
+		expect(run.results[0].errors.join("\n")).toContain(
+			"file_exists path must stay within cwd",
+		);
 	});
 
 	test("file_exists symlink to directory inside cwd passes", async () => {
@@ -239,7 +286,12 @@ describe("evalfly CLI", () => {
 		});
 
 		expect(result.exitCode).toBe(0);
-		const run = JSON.parse(await readFile(join(cwd, "evals", "runs", "run-symlink-inside.json"), "utf8"));
+		const run = JSON.parse(
+			await readFile(
+				join(cwd, "evals", "runs", "run-symlink-inside.json"),
+				"utf8",
+			),
+		);
 		expect(run.results[0]).toMatchObject({ passed: true, critical: true });
 	});
 
@@ -252,8 +304,13 @@ describe("evalfly CLI", () => {
 			runId: "run-report-fields",
 		});
 
-		const reportResult = await dispatch(["report", "run-report-fields"], { cwd });
-		const report = await readFile(join(cwd, "evals", "reports", "run-report-fields.md"), "utf8");
+		const reportResult = await dispatch(["report", "run-report-fields"], {
+			cwd,
+		});
+		const report = await readFile(
+			join(cwd, "evals", "reports", "run-report-fields.md"),
+			"utf8",
+		);
 
 		expect(reportResult.exitCode).toBe(0);
 		expect(report).toContain("Verdict: fail");
