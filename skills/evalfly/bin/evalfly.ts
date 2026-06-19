@@ -213,7 +213,7 @@ function parseOptionalFlag(args: string[], flag: string): string | undefined {
 		return undefined;
 	}
 	const value = args[index + 1];
-	if (!value) {
+	if (!value || value.startsWith("--")) {
 		throw new Error(`${flag} requires a value`);
 	}
 	return value;

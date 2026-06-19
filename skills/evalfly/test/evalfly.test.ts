@@ -210,6 +210,26 @@ describe("evalfly CLI", () => {
 		);
 	});
 
+	test("run rejects --commit-range without a value before writing artifacts", async () => {
+		const cwd = await makeProject();
+		await writeFile(join(cwd, "expected.txt"), "ok");
+
+		const result = await dispatch(
+			["run", "--suite", "smoke", "--commit-range", "--unused"],
+			{
+				cwd,
+				now: () => new Date("2026-06-19T12:00:00.000Z"),
+				runId: "run-missing-commit-range",
+			},
+		);
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("--commit-range requires a value");
+		await expect(
+			readFile(join(cwd, "evals", "runs", "run-missing-commit-range.json")),
+		).rejects.toThrow();
+	});
+
 	test("missing file_exists critical case produces fail verdict and nonzero exit", async () => {
 		const cwd = await makeProject();
 
