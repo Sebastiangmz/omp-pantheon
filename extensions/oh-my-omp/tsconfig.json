@@ -9,5 +9,5 @@
     "types": [],
     "allowImportingTsExtensions": true
   },
-  "include": ["index.ts", "honcho-tools.ts", "loop/*.ts", "hooks/*.ts"]
+  "include": ["index.ts", "loop/*.ts", "hooks/*.ts"]
 }

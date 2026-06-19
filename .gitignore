@@ -18,14 +18,13 @@ node_modules/
 *.db
 *.db-*
 *.jsonl
-honcho.json
 credentials.json
 secrets.json
 *-credentials.json
 *-secrets.json
 
-.pi/.honcho-state.json
-.pi/.honcho-state.json.corrupt-*
+.pi/.specsafe-state.json
+.pi/.specsafe-state.json.corrupt-*
 .pi/.push-log.jsonl
 .pi/.linear-log.jsonl
 .pi/.github-log.jsonl

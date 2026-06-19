@@ -2,6 +2,7 @@
 # omp-pantheon installer — symlinks this bundle into ~/.omp/agent/.
 # Re-runnable. Honors PI_CODING_AGENT_DIR / OMP profiles if AGENT_DIR is set.
 set -euo pipefail
+shopt -s nullglob
 
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AGENT_DIR="${AGENT_DIR:-$HOME/.omp/agent}"

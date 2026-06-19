@@ -5,7 +5,6 @@
     "": {
       "name": "omp-pantheon",
       "dependencies": {
-        "@honcho-ai/sdk": "latest",
         "@linear/sdk": "^82.1.0",
         "turndown": "^7.2.0",
         "typebox": "^1.1.24",
@@ -120,8 +119,6 @@
     "@google/genai": ["@google/genai@1.52.0", "", { "dependencies": { "google-auth-library": "^10.3.0", "p-retry": "^4.6.2", "protobufjs": "^7.5.4", "ws": "^8.18.0" }, "peerDependencies": { "@modelcontextprotocol/sdk": "^1.25.2" }, "optionalPeers": ["@modelcontextprotocol/sdk"] }, "sha512-gwSvbpiN/17O9TbsqSsE/OzZcpv5Fo4RQjdngGgogtuB9RsyJ8ZHhX5KjHj1bp5N9snN2eK8LDGXSaWW2hof8Q=="],
 
     "@graphql-typed-document-node/core": ["@graphql-typed-document-node/core@3.2.0", "", { "peerDependencies": { "graphql": "^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0" } }, "sha512-mB9oAsNCm9aM3/SOv4YtBMqZbYj10R7dkq8byBqxGY/ncFwhf2oQzMV+LCRlWoDSEBJ3COiR1yeDvMtsoOsuFQ=="],
-
-    "@honcho-ai/sdk": ["@honcho-ai/sdk@2.1.2", "", { "dependencies": { "zod": "4.0.0" } }, "sha512-+aRpqK1UgRk0b21RYsQy6OeSXTHARQwPcC4Tv+dSR2QFA2q0kM9oUqPBuGG8boiRBrag7DTthx8g1E/Nwoz7OQ=="],
 
     "@huggingface/jinja": ["@huggingface/jinja@0.5.9", "", {}, "sha512-uWTG+l3VJRsl7EXxYizuL3P+cCPoc3cRqbWWRcQN0FhejRfbdq0RNhCmbY/YDtnTcz9icdLYuLDjsnz4d8JMuw=="],
 
