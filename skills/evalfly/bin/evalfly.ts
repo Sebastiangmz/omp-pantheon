@@ -138,6 +138,11 @@ async function reportCommand(
 		);
 	}
 	assertSafeRunId(result.value.run_id);
+	if (result.value.run_id !== runId) {
+		throw new Error(
+			`run_id mismatch: requested ${runId} but saved run is ${result.value.run_id}`,
+		);
+	}
 	await writeReport(cwd, result.value);
 	return {
 		exitCode: 0,
@@ -301,8 +306,7 @@ function missingPathError(error: unknown): boolean {
 }
 
 async function writeRun(cwd: string, run: RunRecord): Promise<void> {
-	const runsDir = join(cwd, "evals", "runs");
-	await mkdir(runsDir, { recursive: true });
+	await ensureArtifactDir(cwd, ["evals", "runs"]);
 	await writeFile(
 		await artifactPath(cwd, ["evals", "runs"], run.run_id, ".json"),
 		`${JSON.stringify(run, null, 2)}\n`,
@@ -310,8 +314,7 @@ async function writeRun(cwd: string, run: RunRecord): Promise<void> {
 }
 
 async function writeReport(cwd: string, run: RunRecord): Promise<void> {
-	const reportsDir = join(cwd, "evals", "reports");
-	await mkdir(reportsDir, { recursive: true });
+	await ensureArtifactDir(cwd, ["evals", "reports"]);
 	await writeFile(
 		await artifactPath(cwd, ["evals", "reports"], run.run_id, ".md"),
 		renderReport(run),
@@ -348,16 +351,41 @@ function assertSafeRunId(runId: string): void {
 	}
 }
 
-async function artifactPath(
+async function ensureArtifactDir(
 	cwd: string,
 	artifactDirParts: [string, string],
-	runId: string,
-	extension: ".json" | ".md",
-): Promise<string> {
-	assertSafeRunId(runId);
+): Promise<void> {
 	const artifactDir = join(cwd, ...artifactDirParts);
+	await assertProjectEvalsDir(cwd);
+	try {
+		await assertArtifactDir(cwd, artifactDirParts, await realpath(artifactDir));
+		return;
+	} catch (error) {
+		if (!missingPathError(error)) {
+			throw error;
+		}
+	}
+	await mkdir(artifactDir, { recursive: true });
+	await assertArtifactDir(cwd, artifactDirParts, await realpath(artifactDir));
+}
+
+async function assertProjectEvalsDir(cwd: string): Promise<void> {
 	const realCwd = await realpath(cwd);
-	const realArtifactDir = await realpath(artifactDir);
+	const realEvalsDir = await realpath(join(cwd, "evals"));
+	const expectedEvalsDir = resolve(realCwd, "evals");
+	if (realEvalsDir !== expectedEvalsDir) {
+		throw new Error(
+			"unsafe artifact directory: evals (artifact directory must be evals)",
+		);
+	}
+}
+
+async function assertArtifactDir(
+	cwd: string,
+	artifactDirParts: [string, string],
+	realArtifactDir: string,
+): Promise<void> {
+	const realCwd = await realpath(cwd);
 	const realArtifactDirRelativePath = relative(realCwd, realArtifactDir);
 	if (
 		realArtifactDirRelativePath === "" ||
@@ -375,6 +403,19 @@ async function artifactPath(
 			`unsafe artifact directory: ${join(...artifactDirParts)} (artifact directory must be ${join(...artifactDirParts)})`,
 		);
 	}
+}
+
+async function artifactPath(
+	cwd: string,
+	artifactDirParts: [string, string],
+	runId: string,
+	extension: ".json" | ".md",
+): Promise<string> {
+	assertSafeRunId(runId);
+	const artifactDir = join(cwd, ...artifactDirParts);
+	await assertProjectEvalsDir(cwd);
+	const realArtifactDir = await realpath(artifactDir);
+	await assertArtifactDir(cwd, artifactDirParts, realArtifactDir);
 
 	const targetPath = resolve(realArtifactDir, `${runId}${extension}`);
 	const relativePath = relative(realArtifactDir, targetPath);
