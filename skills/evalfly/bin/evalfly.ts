@@ -237,18 +237,16 @@ function assertContextLine(label: string, value: string): void {
 	}
 }
 
-function safeContextLine(value: unknown): string | undefined {
-	if (typeof value !== "string") {
-		return undefined;
+function requireContextLine(label: string, value: unknown): string {
+	if (typeof value !== "string" || value.length === 0) {
+		throw new Error(`${label} must be a non-empty string`);
 	}
-	if (
-		value.length === 0 ||
-		value.length > CONTEXT_VALUE_MAX_LENGTH ||
-		/[\u0000-\u001f\u007f]/.test(value)
-	) {
-		return undefined;
-	}
+	assertContextLine(label, value);
 	return value;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 async function buildRunContext(
@@ -279,17 +277,23 @@ async function readCurrentSpecSafeSlice(
 			return undefined;
 		}
 		const parsed = JSON.parse(await readFile(statePath, "utf8"));
-		const slice =
-			typeof parsed === "object" && parsed !== null
-				? (parsed as { currentSlice?: unknown }).currentSlice
-				: undefined;
-		if (typeof slice !== "object" || slice === null) {
+		if (
+			!isRecord(parsed) ||
+			!("currentSlice" in parsed) ||
+			!Array.isArray(parsed.history)
+		) {
+			throw new Error("malformed SpecSafe state");
+		}
+		const slice = parsed.currentSlice;
+		if (slice === null) {
 			return undefined;
 		}
-		const record = slice as { id?: unknown; sessionId?: unknown };
+		if (!isRecord(slice)) {
+			throw new Error("malformed SpecSafe currentSlice");
+		}
 		return {
-			id: safeContextLine(record.id),
-			sessionId: safeContextLine(record.sessionId),
+			id: requireContextLine("currentSlice.id", slice.id),
+			sessionId: requireContextLine("currentSlice.sessionId", slice.sessionId),
 		};
 	} catch (error) {
 		if (missingPathError(error)) {

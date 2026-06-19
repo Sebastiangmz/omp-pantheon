@@ -273,6 +273,28 @@ describe("evalfly CLI", () => {
 		).rejects.toThrow();
 	});
 
+	test("run fails clearly when SpecSafe state has malformed shape", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, ".pi"), { recursive: true });
+		await writeFile(join(cwd, "expected.txt"), "ok");
+		await writeFile(
+			join(cwd, ".pi", ".specsafe-state.json"),
+			JSON.stringify({ history: [] }),
+		);
+
+		const result = await dispatch(["run", "--suite", "smoke"], {
+			cwd,
+			now: () => new Date("2026-06-19T12:00:00.000Z"),
+			runId: "run-bad-specsafe-shape",
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("failed to read .pi/.specsafe-state.json");
+		await expect(
+			readFile(join(cwd, "evals", "runs", "run-bad-specsafe-shape.json")),
+		).rejects.toThrow();
+	});
+
 	test("run rejects control characters in commit range before writing artifacts", async () => {
 		const cwd = await makeProject();
 		await writeFile(join(cwd, "expected.txt"), "ok");
