@@ -22,8 +22,6 @@ Run from the **target project's cwd**, not from inside pi-seshat. The skill refu
 |-----------------------|-------------------------------------------------------------------------|
 | `--i-approve`         | Required to perform any on-disk mutation. Without it, the skill previews. |
 | `--force-symlink`     | Replace an existing regular `.omp/` directory with the symlink.         |
-| `--peer=<name>`       | Override `HONCHO_PEER_ID` for template substitution.                    |
-| `--workspace=<id>`    | Override `HONCHO_WORKSPACE_ID` for template substitution.               |
 
 ## What it applies
 

@@ -8,7 +8,6 @@
  *   bun run .omp/skills/bootstrap/bin/bootstrap.ts                # dry-run
  *   bun run .omp/skills/bootstrap/bin/bootstrap.ts --i-approve    # apply
  *   bun run .omp/skills/bootstrap/bin/bootstrap.ts --i-approve --force-symlink
- *   bun run .omp/skills/bootstrap/bin/bootstrap.ts --peer=<name> --workspace=<id>
  *
  * Exit codes:
  *   0  success or successful dry-run (including idempotent no-op)
@@ -31,8 +30,8 @@ const TEMPLATES_DIR = path.resolve(__dirname, "..", "templates");
 const DIRS = [".pi", "specs", "specs/briefs", "specs/archive"];
 
 const GITIGNORE_PATTERNS = [
-	".pi/.honcho-state.json",
-	".pi/.honcho-state.json.corrupt-*",
+	".pi/.specsafe-state.json",
+	".pi/.specsafe-state.json.corrupt-*",
 	".pi/.push-log.jsonl",
 	".pi/.linear-log.jsonl",
 	".pi/.github-log.jsonl",
@@ -45,8 +44,6 @@ const GITIGNORE_PATTERNS = [
 type Opts = {
 	iApprove: boolean;
 	forceSymlink: boolean;
-	peer?: string;
-	workspace?: string;
 };
 
 function fail(message: string, code: number): never {
@@ -59,9 +56,6 @@ function parseArgs(argv: string[]): Opts {
 	for (const arg of argv) {
 		if (arg === "--i-approve") opts.iApprove = true;
 		else if (arg === "--force-symlink") opts.forceSymlink = true;
-		else if (arg.startsWith("--peer=")) opts.peer = arg.slice("--peer=".length);
-		else if (arg.startsWith("--workspace="))
-			opts.workspace = arg.slice("--workspace=".length);
 		else fail(`error: unknown flag: ${arg}`, 2);
 	}
 	return opts;
@@ -228,13 +222,8 @@ function applyMode(
 
 	// Template substitution vars
 	const projectName = path.basename(cwd);
-	const honchoWorkspace =
-		opts.workspace ?? process.env.HONCHO_WORKSPACE_ID ?? "default";
-	const honchoPeer = opts.peer ?? process.env.HONCHO_PEER_ID ?? "luci";
 	const vars = {
 		PROJECT_NAME: projectName,
-		HONCHO_WORKSPACE: honchoWorkspace,
-		HONCHO_PEER: honchoPeer,
 	};
 
 	// (c) AGENTS.md
