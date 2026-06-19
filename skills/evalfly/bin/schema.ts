@@ -1,3 +1,5 @@
+import Type from "typebox";
+
 export const EVAL_CONFIG_SCHEMA_VERSION = "evalfly.config.v1" as const;
 export const EVAL_CASE_SCHEMA_VERSION = "evalfly.case.v1" as const;
 export const EVAL_RUN_SCHEMA_VERSION = "evalfly.run.v1" as const;
@@ -5,6 +7,139 @@ export const EVAL_RUN_SCHEMA_VERSION = "evalfly.run.v1" as const;
 export const EVAL_SUITES = ["smoke", "regression", "benchmark"] as const;
 export const EVAL_RISK_TIERS = ["critical", "major", "minor"] as const;
 export const EVAL_JUDGE_TYPES = ["deterministic", "llm", "human"] as const;
+
+const nonEmptyString = Type.String({ minLength: 1 });
+
+const EvalSuiteSchema = Type.Union([
+	Type.Literal("smoke"),
+	Type.Literal("regression"),
+	Type.Literal("benchmark"),
+]);
+
+const EvalRiskTierSchema = Type.Union([
+	Type.Literal("critical"),
+	Type.Literal("major"),
+	Type.Literal("minor"),
+]);
+
+
+const FileExistsAssertionSchema = Type.Object(
+	{
+		type: Type.Literal("file_exists"),
+		path: nonEmptyString,
+	},
+	{ additionalProperties: false },
+);
+
+const EvalSourceSchema = Type.Object(
+	{
+		kind: nonEmptyString,
+	},
+	{ additionalProperties: true },
+);
+
+const EvalPrivacySchema = Type.Object(
+	{
+		classification: nonEmptyString,
+		sanitized: Type.Boolean(),
+	},
+	{ additionalProperties: false },
+);
+
+const EvalExpectedSchema = Type.Object(
+	{
+		success_criteria: Type.Array(nonEmptyString, { minItems: 1 }),
+	},
+	{ additionalProperties: false },
+);
+
+const DeterministicJudgeSchema = Type.Object(
+	{
+		type: Type.Literal("deterministic"),
+		assertions: Type.Array(FileExistsAssertionSchema, { minItems: 1 }),
+	},
+	{ additionalProperties: false },
+);
+
+const LlmJudgeSchema = Type.Object(
+	{
+		type: Type.Literal("llm"),
+	},
+	{ additionalProperties: true },
+);
+
+const HumanJudgeSchema = Type.Object(
+	{
+		type: Type.Literal("human"),
+	},
+	{ additionalProperties: true },
+);
+
+export const EvalCaseSchema = Type.Object(
+	{
+		schema_version: Type.Literal(EVAL_CASE_SCHEMA_VERSION),
+		case_id: nonEmptyString,
+		title: nonEmptyString,
+		suite: EvalSuiteSchema,
+		risk_tier: EvalRiskTierSchema,
+		task_type: nonEmptyString,
+		source: EvalSourceSchema,
+		privacy: EvalPrivacySchema,
+		expected: EvalExpectedSchema,
+		judge: Type.Union([
+			DeterministicJudgeSchema,
+			LlmJudgeSchema,
+			HumanJudgeSchema,
+		]),
+	},
+	{ additionalProperties: false },
+);
+
+export const EvalConfigSchema = Type.Object(
+	{
+		schema_version: Type.Literal(EVAL_CONFIG_SCHEMA_VERSION),
+		name: nonEmptyString,
+		cases: Type.Array(EvalCaseSchema, { minItems: 1 }),
+	},
+	{ additionalProperties: false },
+);
+
+const EvalRunSummarySchema = Type.Object(
+	{
+		total: Type.Integer({ minimum: 0 }),
+		passed: Type.Integer({ minimum: 0 }),
+		failed: Type.Integer({ minimum: 0 }),
+		critical_regressions: Type.Integer({ minimum: 0 }),
+	},
+	{ additionalProperties: false },
+);
+
+const EvalRunResultSchema = Type.Object(
+	{
+		case_id: nonEmptyString,
+		title: nonEmptyString,
+		risk_tier: EvalRiskTierSchema,
+		critical: Type.Boolean(),
+		passed: Type.Boolean(),
+		privacy: EvalPrivacySchema,
+		errors: Type.Array(Type.String()),
+	},
+	{ additionalProperties: false },
+);
+
+export const EvalRunSchema = Type.Object(
+	{
+		schema_version: Type.Literal(EVAL_RUN_SCHEMA_VERSION),
+		run_id: nonEmptyString,
+		suite: EvalSuiteSchema,
+		config_name: nonEmptyString,
+		created_at: nonEmptyString,
+		results: Type.Array(EvalRunResultSchema),
+		summary: EvalRunSummarySchema,
+		verdict: Type.Union([Type.Literal("pass"), Type.Literal("fail")]),
+	},
+	{ additionalProperties: false },
+);
 
 export type EvalSuite = (typeof EVAL_SUITES)[number];
 export type EvalRiskTier = (typeof EVAL_RISK_TIERS)[number];
@@ -69,13 +204,25 @@ export type EvalRunSummary = {
 	critical_regressions: number;
 };
 
+export type EvalRunResult = {
+	case_id: string;
+	title: string;
+	risk_tier: EvalRiskTier;
+	critical: boolean;
+	passed: boolean;
+	privacy: EvalPrivacy;
+	errors: string[];
+};
+
 export type EvalRun = {
 	schema_version: typeof EVAL_RUN_SCHEMA_VERSION;
 	run_id: string;
+	suite: EvalSuite;
 	config_name: string;
-	started_at: string;
-	finished_at?: string;
+	created_at: string;
+	results: EvalRunResult[];
 	summary: EvalRunSummary;
+	verdict: "pass" | "fail";
 };
 
 export type ValidationResult<T> =
@@ -115,12 +262,16 @@ export function validateEvalRun(value: unknown): ValidationResult<EvalRun> {
 
 	requireLiteral(value, "schema_version", EVAL_RUN_SCHEMA_VERSION, errors);
 	requireString(value, "run_id", errors);
+	requireOneOf(value, "suite", EVAL_SUITES, errors);
 	requireString(value, "config_name", errors);
-	requireString(value, "started_at", errors);
-	if ("finished_at" in value && value.finished_at !== undefined) {
-		requireString(value, "finished_at", errors);
+	requireString(value, "created_at", errors);
+	if (Array.isArray(value.results)) {
+		value.results.forEach((item, index) => validateRunResult(item, `results[${index}]`, errors));
+	} else {
+		errors.push("results must be an array");
 	}
 	validateRunSummary(value.summary, "summary", errors);
+	requireOneOf(value, "verdict", ["pass", "fail"], errors);
 
 	return finish(value, errors);
 }
@@ -205,6 +356,28 @@ function validateFileExistsAssertion(
 	}
 	requireLiteral(value, joinPath(path, "type"), "file_exists", errors);
 	requireString(value, joinPath(path, "path"), errors);
+}
+
+function validateRunResult(value: unknown, path: string, errors: ErrorSink): void {
+	if (!isRecord(value)) {
+		errors.push(`${path} must be an object`);
+		return;
+	}
+	requireString(value, joinPath(path, "case_id"), errors);
+	requireString(value, joinPath(path, "title"), errors);
+	requireOneOf(value, joinPath(path, "risk_tier"), EVAL_RISK_TIERS, errors);
+	requireBoolean(value, joinPath(path, "critical"), errors);
+	requireBoolean(value, joinPath(path, "passed"), errors);
+	validatePrivacy(value.privacy, joinPath(path, "privacy"), errors);
+	if (!Array.isArray(value.errors)) {
+		errors.push(`${joinPath(path, "errors")} must be an array`);
+		return;
+	}
+	value.errors.forEach((message, index) => {
+		if (typeof message !== "string") {
+			errors.push(`${joinPath(path, `errors[${index}]`)} must be a string`);
+		}
+	});
 }
 
 function validateRunSummary(value: unknown, path: string, errors: ErrorSink): void {
