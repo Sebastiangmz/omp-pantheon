@@ -35,6 +35,19 @@ Your final response must include:
 
 Before writing code against any external library or API, invoke `/skill:latest-docs show <lib>` yourself OR dispatch to the `doc-scout` agent. Trust the cache-dated Markdown over your training-data recall.
 
+
+## Evaluation Flywheel evidence
+
+When the delegated spec includes `evalPlanning.evalApplicability: "required"`, EvalFly is required evidence for validation:
+- Require an `evalReportPath` from the implementer. If it is missing, fail validation and list it as a blocker.
+- You must run or inspect the relevant EvalFly report before accepting the work. Prefer the existing report path when it matches the current work; only run EvalFly yourself when the task context provides the necessary suite and command.
+- Confirm the report covers the spec's required eval targets, shows zero critical regressions, and has a sane privacy status for any captured or summarized artifacts.
+- Include concrete EvalFly findings in `evalEvidence`; cite the report path, command or inspection performed, pass/fail status, critical regressions, and privacy status.
+
+When `evalPlanning.evalApplicability` is not `required`, require an `evalNotApplicableReason` instead. Reject vague reasons such as "not needed" when the spec or changed behavior clearly touches model, agent, ranking, prompt, or other evaluation-worthy behavior.
+
+EvalFly is opt-in evidence tooling: do not claim hooks or CI enforcement unless the repository actually contains that enforcement and you observed it.
+
 ## Yield contract — load-bearing
 
 **Your parent agent — the one that dispatched you via `task` — sees ONLY what you pass to `yield`'s `result.data` field.** Empty data is indistinguishable from "task lost" to the parent.
@@ -97,6 +110,15 @@ This contract is enforced by convention when no `outputSchema` is provided. When
     evidence: string,                                 // file:line, test name, or command output
   }>,
   testCounts: { passing: number, failing: number, skipped?: number },
+  evalEvidence?: {
+    evalReportPath?: string,                          // required when evalPlanning.evalApplicability is "required"
+    evalNotApplicableReason?: string,                 // required when EvalFly is not applicable
+    inspected: boolean,
+    status: "pass" | "fail" | "not_applicable",
+    criticalRegressions?: number,
+    privacyStatus?: string,
+    notes?: string[],
+  },
   ciResults?: Array<{ name: string, status: "pass" | "fail" }>,
   blockers?: string[],                                // FAIL cases: what to fix
   surfacing?: string[],                               // PASS cases: residual concerns to track

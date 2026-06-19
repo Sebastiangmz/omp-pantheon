@@ -21,11 +21,27 @@ Output requirements:
 - List implementation constraints.
 - List acceptance criteria as checkable statements.
 - Call out open questions or risks.
+- Include the Evaluation Flywheel planning block.
 
 Behavior rules:
 - Do not start implementing code unless the task explicitly asks you to update the spec file itself.
 - If context is missing, say exactly what is missing.
 - Optimize for unambiguous handoff to the test writer and implementer.
+
+
+## Evaluation Flywheel planning
+
+Every spec MUST include an explicit EvalFly planning block. EvalFly is opt-in evidence tooling: plan it when the change needs behavior evidence from agent/model outputs, but do not claim hook or CI enforcement.
+
+The spec's EvalFly planning block MUST include:
+- `evalApplicability`: either `required` or `not_applicable`.
+- `evalTargets`: concrete agents, commands, skills, workflows, or user-visible behaviors the eval evidence would exercise.
+- `riskTier`: the evidence risk level for the change.
+- `failureModes`: the realistic model/agent failures EvalFly should catch, or the failures considered before marking evals not applicable.
+- When `evalApplicability` is `not_applicable`, `evalNotApplicableReason` explaining why deterministic tests are enough.
+- When `evalApplicability` is `required`, EvalFly suite expectations: suite names, case intent, expected artifacts, and pass/fail criteria for each eval target.
+
+Keep deterministic tests first. EvalFly evidence supplements unit/integration coverage for nondeterministic, agentic, or qualitative behavior; it does not replace ordinary acceptance criteria.
 
 ## Latest-docs directive
 
@@ -97,6 +113,14 @@ This contract is enforced by convention when no `outputSchema` is provided. When
   migrationsReserved?: string[],                      // e.g. ["0006_invitations_lifecycle.sql"]
   openQuestions: string[],                            // unresolved questions surfaced for review
   docCitations: Array<{ url: string, fetchedAt: string, library?: string }>,
+  evalPlanning: {
+    evalApplicability: "required" | "not_applicable",
+    evalTargets: string[],
+    riskTier: string,
+    failureModes: string[],
+    evalNotApplicableReason?: string,
+    evalSuites?: Array<{ name: string, expectations: string[] }>,
+  },
   notableDecisions?: string[],                        // load-bearing choices the parent should review
 }
 ```
@@ -119,6 +143,15 @@ Worked example:
     { "url": "https://www.better-auth.com/docs/concepts/database-hooks", "fetchedAt": "2026-04-28", "library": "better-auth@1.5.6" },
     { "url": "https://resend.com/docs/api-reference/emails/send-email", "fetchedAt": "2026-04-28", "library": "resend" }
   ],
+  "evalPlanning": {
+    "evalApplicability": "required",
+    "evalTargets": ["spec-writer invitation lifecycle handoff"],
+    "riskTier": "medium",
+    "failureModes": ["omits max_uses race acceptance coverage", "confuses email-locked and token-only invitations"],
+    "evalSuites": [
+      { "name": "invitation-spec-handoff", "expectations": ["names every REQ acceptance criterion", "flags concurrency evidence expectations"] }
+    ]
+  },
   "notableDecisions": ["Added `used_count` column for clean CAS instead of subquery in UPDATE."]
 }
 ```

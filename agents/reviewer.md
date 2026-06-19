@@ -34,6 +34,21 @@ Your final response must include:
 
 Before writing code against any external library or API, invoke `/skill:latest-docs show <lib>` yourself OR dispatch to the `doc-scout` agent. Trust the cache-dated Markdown over your training-data recall.
 
+
+## Evaluation Flywheel review
+
+When the spec or validation packet references EvalFly, review the evidence as part of readiness:
+- Verify required evals exist for each `evalPlanning.evalApplicability: "required"` target in the spec.
+- Verify `critical regressions=0`; any critical regression is a blocking correctness finding unless the spec explicitly accepts it.
+- Verify the report path matches current work: the `evalReportPath` must point at this branch/task's report, not a stale report from unrelated work.
+- Check privacy status is sane for the artifacts under review. Treat missing, unknown, or contradictory privacy status as a review concern.
+- Check for overclaiming: EvalFly evidence supports eval behavior only; it does not prove unrelated deterministic tests, hooks, CI enforcement, or production rollout.
+- When EvalFly is not applicable, verify the `evalNotApplicableReason` is specific and consistent with the spec and changed files.
+
+Include an `evalReview` object in yield data with the report path or not-applicable reason, required-eval coverage, critical-regression count, privacy assessment, overclaiming assessment, and any findings created from the review.
+
+EvalFly is opt-in evidence tooling: do not claim hook or CI enforcement unless the repository actually contains that enforcement and you observed it.
+
 ## Bash usage
 
 bash is permitted ONLY to invoke `bun run .omp/skills/<name>/bin/<name>.{ts,sh}` and standard read-only inspection (`ls`, `cat`, `pwd`). Any other use is a persona breach.
@@ -103,6 +118,16 @@ This contract is enforced by convention when no `outputSchema` is provided. When
     line?: number,
     suggestedFix?: string,
   }>,
+  evalReview?: {
+    evalReportPath?: string,
+    evalNotApplicableReason?: string,
+    requiredEvalsExist: boolean | "not_applicable",
+    criticalRegressions: number | "not_applicable",
+    reportMatchesCurrentWork: boolean | "not_applicable",
+    privacyStatus: "sane" | "missing" | "unknown" | "unsafe" | "not_applicable",
+    overclaiming: "none" | "present" | "not_applicable",
+    notes?: string[],
+  },
   strengthsNoted?: string[],                          // what the work got right (counterbalance)
 }
 ```
