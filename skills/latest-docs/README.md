@@ -63,7 +63,7 @@ All seeded entries carry an explicit `"ttl_days": 7` that matches the default. T
 
 `register` is the sole mutation path and is bounded to `registry.json` and `.pi/.docs-registry-log.jsonl`. The audit log records every create and update with a before/after snapshot and an `approver` field (hardcoded to `"luci"` — the human who passed `--i-approve`).
 
-The `doc-scout` agent holds the stateful-memory integration removed; `latest-docs` is stateless beyond the filesystem cache.
+The `doc-scout` agent is a stateless wrapper around `latest-docs`; durable memory is intentionally not part of the public bundle.
 
 ## Post-slice hardening follow-up
 
