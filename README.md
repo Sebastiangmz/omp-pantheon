@@ -25,7 +25,7 @@ that doesn't stop until the work is done.
 |---|---|
 | **Agents** | Pantheon: `sisyphus`, `hephaestus`, `oracle`, `atlas`, `prometheus`, `metis`; Seshat: `steward`, `spec-writer`, `implementer`, `test-writer`, `reviewer`, `reviewer-kimi`, `validator`, `doc-scout` |
 | **Slash commands** | `/ultrawork` · `/ulw` · `/init-deep` · `/refactor` · `/handoff` · `/start-work` · `/remove-ai-slops` · `/omomomo` |
-| **Skills** | Pantheon skills plus Seshat/SpecSafe skills: `bootstrap`, `coherence`, `docs`, `env-doctor`, `github`, `latest-docs`, `linear`, `push`, `specsafe` |
+| **Skills** | Pantheon skills plus Seshat/SpecSafe skills: `bootstrap`, `coherence`, `docs`, `env-doctor`, `evaluation-flywheel`, `github`, `latest-docs`, `linear`, `push`, `specsafe`; opt-in `evalfly` templates/CLI provide deterministic evaluation evidence |
 | **Hooks** | Extension hooks: `todo-enforcer`, `comment-checker`, `intent-gate`; agent hooks: `specsafe-session`, `specsafe-subagents`, `i-approve`, `fallback-audit` |
 | **Loop** | Ralph / ULW self-referential loop runtime (`/ralph-loop`, `/ulw-loop`, `/cancel-ralph`, `/stop-continuation`) |
 
@@ -34,7 +34,8 @@ that doesn't stop until the work is done.
 ```
 agents/                 OMP agent definitions (*.md)
 commands/               OMP slash commands (*.md)
-skills/<name>/SKILL.md  OMP skills
+skills/<name>/SKILL.md  OMP skills, including the opt-in evaluation flywheel
+skills/evalfly/          opt-in evaluation template and CLI
 hooks/*.ts              OMP lifecycle hooks from Seshat/SpecSafe
 extensions/oh-my-omp/   the loop runtime + lifecycle hooks (TS extension)
 test/                   integration and regression tests for Seshat/SpecSafe
