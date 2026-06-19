@@ -32,3 +32,5 @@ secrets.json
 .pi/.doc-drafts/
 .pi/.docs-cache/
 .pi/.bootstrap-log.jsonl
+
+.pi/evalfly/raw/

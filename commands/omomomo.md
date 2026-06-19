@@ -34,6 +34,9 @@ oh-my-openagent-inspired Pantheon layer, then folds in the local Seshat stack so
 - **Loop runtime and guardrails**: Ralph/ULW continuation commands, todo
   enforcement, intent gate, comment checker, `i-approve`, fallback audit, and
   SpecSafe subagent/session hooks.
+- **Opt-in evaluation flywheel**: `evaluation-flywheel` guidance plus the
+  `evalfly` template/CLI for deterministic smoke evidence and sanitized report
+  artifacts; no hook or CI enforcement is claimed.
 
 ## Commands in the bundle
 
