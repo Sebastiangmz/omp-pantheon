@@ -238,9 +238,18 @@ export function validateEvalConfig(
 		return { ok: false, errors: ["$ must be an object"] };
 	}
 
+	rejectUnknownProperties(
+		value,
+		"$",
+		["schema_version", "name", "cases"],
+		errors,
+	);
 	requireLiteral(value, "schema_version", EVAL_CONFIG_SCHEMA_VERSION, errors);
 	requireString(value, "name", errors);
 	if (Array.isArray(value.cases)) {
+		if (value.cases.length === 0) {
+			errors.push("cases must contain at least one case");
+		}
 		value.cases.forEach((item, index) =>
 			validateCaseInto(item, `cases[${index}]`, errors),
 		);
@@ -263,6 +272,21 @@ export function validateEvalRun(value: unknown): ValidationResult<EvalRun> {
 		return { ok: false, errors: ["$ must be an object"] };
 	}
 
+	rejectUnknownProperties(
+		value,
+		"$",
+		[
+			"schema_version",
+			"run_id",
+			"suite",
+			"config_name",
+			"created_at",
+			"results",
+			"summary",
+			"verdict",
+		],
+		errors,
+	);
 	requireLiteral(value, "schema_version", EVAL_RUN_SCHEMA_VERSION, errors);
 	requireString(value, "run_id", errors);
 	requireOneOf(value, "suite", EVAL_SUITES, errors);
@@ -290,6 +314,23 @@ function validateCaseInto(
 		errors.push(`${path} must be an object`);
 		return;
 	}
+	rejectUnknownProperties(
+		value,
+		path,
+		[
+			"schema_version",
+			"case_id",
+			"title",
+			"suite",
+			"risk_tier",
+			"task_type",
+			"source",
+			"privacy",
+			"expected",
+			"judge",
+		],
+		errors,
+	);
 
 	requireLiteral(
 		value,
@@ -325,6 +366,7 @@ function validatePrivacy(
 		errors.push(`${path} must be an object`);
 		return;
 	}
+	rejectUnknownProperties(value, path, ["classification", "sanitized"], errors);
 	requireString(value, joinPath(path, "classification"), errors);
 	requireBoolean(value, joinPath(path, "sanitized"), errors);
 }
@@ -338,9 +380,15 @@ function validateExpected(
 		errors.push(`${path} must be an object`);
 		return;
 	}
+	rejectUnknownProperties(value, path, ["success_criteria"], errors);
 	if (!Array.isArray(value.success_criteria)) {
 		errors.push(`${joinPath(path, "success_criteria")} must be an array`);
 		return;
+	}
+	if (value.success_criteria.length === 0) {
+		errors.push(
+			`${joinPath(path, "success_criteria")} must contain at least one criterion`,
+		);
 	}
 	value.success_criteria.forEach((criterion, index) => {
 		if (typeof criterion !== "string" || criterion.length === 0) {
@@ -357,12 +405,20 @@ function validateJudge(value: unknown, path: string, errors: ErrorSink): void {
 		return;
 	}
 	requireOneOf(value, joinPath(path, "type"), EVAL_JUDGE_TYPES, errors);
+	if (value.type === "deterministic") {
+		rejectUnknownProperties(value, path, ["type", "assertions"], errors);
+	}
 	if (value.type !== "deterministic") {
 		return;
 	}
 	if (!Array.isArray(value.assertions)) {
 		errors.push(`${joinPath(path, "assertions")} must be an array`);
 		return;
+	}
+	if (value.assertions.length === 0) {
+		errors.push(
+			`${joinPath(path, "assertions")} must contain at least one assertion`,
+		);
 	}
 	value.assertions.forEach((assertion, index) => {
 		validateFileExistsAssertion(
@@ -382,6 +438,7 @@ function validateFileExistsAssertion(
 		errors.push(`${path} must be an object`);
 		return;
 	}
+	rejectUnknownProperties(value, path, ["type", "path"], errors);
 	requireLiteral(value, joinPath(path, "type"), "file_exists", errors);
 	requireString(value, joinPath(path, "path"), errors);
 }
@@ -395,6 +452,20 @@ function validateRunResult(
 		errors.push(`${path} must be an object`);
 		return;
 	}
+	rejectUnknownProperties(
+		value,
+		path,
+		[
+			"case_id",
+			"title",
+			"risk_tier",
+			"critical",
+			"passed",
+			"privacy",
+			"errors",
+		],
+		errors,
+	);
 	requireString(value, joinPath(path, "case_id"), errors);
 	requireString(value, joinPath(path, "title"), errors);
 	requireOneOf(value, joinPath(path, "risk_tier"), EVAL_RISK_TIERS, errors);
@@ -421,6 +492,12 @@ function validateRunSummary(
 		errors.push(`${path} must be an object`);
 		return;
 	}
+	rejectUnknownProperties(
+		value,
+		path,
+		["total", "passed", "failed", "critical_regressions"],
+		errors,
+	);
 	requireNonNegativeInteger(value, joinPath(path, "total"), errors);
 	requireNonNegativeInteger(value, joinPath(path, "passed"), errors);
 	requireNonNegativeInteger(value, joinPath(path, "failed"), errors);
@@ -485,6 +562,21 @@ function requireNonNegativeInteger(
 	const field = fieldName(path);
 	if (!Number.isInteger(value[field]) || (value[field] as number) < 0) {
 		errors.push(`${path} must be a non-negative integer`);
+	}
+}
+
+function rejectUnknownProperties(
+	value: Record<string, unknown>,
+	path: string,
+	allowed: readonly string[],
+	errors: ErrorSink,
+): void {
+	for (const key of Object.keys(value)) {
+		if (allowed.includes(key)) {
+			continue;
+		}
+		const prefix = path === "$" ? "" : `${path} `;
+		errors.push(`${prefix}unexpected property: ${key}`);
 	}
 }
 

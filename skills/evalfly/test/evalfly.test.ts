@@ -158,6 +158,23 @@ describe("evalfly CLI", () => {
 		expect(run.results[0].errors.join("\n")).toContain("expected.txt");
 	});
 
+	test("run --suite smoke rejects an empty selected suite", async () => {
+		const cwd = await makeProject({
+			schema_version: "evalfly.config.v1",
+			name: "Regression only suite",
+			cases: [{ ...validCase, suite: "regression" }],
+		});
+
+		const result = await dispatch(["run", "--suite", "smoke"], {
+			cwd,
+			now: () => new Date("2026-06-19T12:00:00.000Z"),
+			runId: "run-empty-smoke",
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("no cases selected for suite: smoke");
+	});
+
 	test("file_exists parent traversal outside cwd fails without probing outside files", async () => {
 		const cwd = await makeProject();
 		const outsideName = `${basename(cwd)}-outside.txt`;
@@ -315,5 +332,202 @@ describe("evalfly CLI", () => {
 		expect(reportResult.exitCode).toBe(0);
 		expect(report).toContain("Verdict: fail");
 		expect(report).toContain("critical_regressions: 1");
+	});
+
+	test("report rejects unsafe run ids before reading run artifacts", async () => {
+		const cwd = await makeProject();
+
+		const result = await dispatch(["report", "../outside"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("unsafe run id");
+	});
+
+	test("report rejects saved run_id that would write outside reports directory", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, "evals", "runs"), { recursive: true });
+		await writeFile(
+			join(cwd, "evals", "runs", "safe-run.json"),
+			JSON.stringify(
+				{
+					schema_version: "evalfly.run.v1",
+					run_id: "../escaped-report",
+					suite: "smoke",
+					config_name: "Smoke suite",
+					created_at: "2026-06-19T12:00:00.000Z",
+					results: [],
+					summary: {
+						total: 0,
+						passed: 0,
+						failed: 0,
+						critical_regressions: 0,
+					},
+					verdict: "pass",
+				},
+				null,
+				2,
+			),
+		);
+
+		const result = await dispatch(["report", "safe-run"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("unsafe run id");
+	});
+
+	test("run refuses to write through an escaping runs directory symlink", async () => {
+		const cwd = await makeProject();
+		await writeFile(join(cwd, "expected.txt"), "ok");
+		const outsideDir = await mkdtemp(join(tmpdir(), "evalfly-runs-outside-"));
+		await symlink(outsideDir, join(cwd, "evals", "runs"), "dir");
+
+		const result = await dispatch(["run", "--suite", "smoke"], {
+			cwd,
+			now: () => new Date("2026-06-19T12:00:00.000Z"),
+			runId: "run-symlink-runs",
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("artifact directory must stay within cwd");
+	});
+
+	test("report refuses to read through an escaping runs directory symlink", async () => {
+		const cwd = await makeProject();
+		const outsideDir = await mkdtemp(join(tmpdir(), "evalfly-runs-outside-"));
+		await writeFile(
+			join(outsideDir, "outside-run.json"),
+			JSON.stringify(
+				{
+					schema_version: "evalfly.run.v1",
+					run_id: "outside-run",
+					suite: "smoke",
+					config_name: "Smoke suite",
+					created_at: "2026-06-19T12:00:00.000Z",
+					results: [],
+					summary: {
+						total: 0,
+						passed: 0,
+						failed: 0,
+						critical_regressions: 0,
+					},
+					verdict: "pass",
+				},
+				null,
+				2,
+			),
+		);
+		await symlink(outsideDir, join(cwd, "evals", "runs"), "dir");
+
+		const result = await dispatch(["report", "outside-run"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("artifact directory must stay within cwd");
+	});
+
+	test("report refuses to write through an escaping reports directory symlink", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, "evals", "runs"), { recursive: true });
+		await writeFile(
+			join(cwd, "evals", "runs", "safe-run.json"),
+			JSON.stringify(
+				{
+					schema_version: "evalfly.run.v1",
+					run_id: "safe-run",
+					suite: "smoke",
+					config_name: "Smoke suite",
+					created_at: "2026-06-19T12:00:00.000Z",
+					results: [],
+					summary: {
+						total: 0,
+						passed: 0,
+						failed: 0,
+						critical_regressions: 0,
+					},
+					verdict: "pass",
+				},
+				null,
+				2,
+			),
+		);
+		const outsideDir = await mkdtemp(
+			join(tmpdir(), "evalfly-reports-outside-"),
+		);
+		await symlink(outsideDir, join(cwd, "evals", "reports"), "dir");
+
+		const result = await dispatch(["report", "safe-run"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("artifact directory must stay within cwd");
+	});
+
+	test("report refuses to write through a reports directory symlink inside cwd", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, "evals", "runs"), { recursive: true });
+		await writeFile(
+			join(cwd, "evals", "runs", "safe-run.json"),
+			JSON.stringify(
+				{
+					schema_version: "evalfly.run.v1",
+					run_id: "safe-run",
+					suite: "smoke",
+					config_name: "Smoke suite",
+					created_at: "2026-06-19T12:00:00.000Z",
+					results: [],
+					summary: {
+						total: 0,
+						passed: 0,
+						failed: 0,
+						critical_regressions: 0,
+					},
+					verdict: "pass",
+				},
+				null,
+				2,
+			),
+		);
+		await mkdir(join(cwd, "reports-target"), { recursive: true });
+		await symlink(
+			join(cwd, "reports-target"),
+			join(cwd, "evals", "reports"),
+			"dir",
+		);
+
+		const result = await dispatch(["report", "safe-run"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("artifact directory must be evals/reports");
+	});
+
+	test("report rejects malformed saved run records", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, "evals", "runs"), { recursive: true });
+		await writeFile(
+			join(cwd, "evals", "runs", "malformed-run.json"),
+			JSON.stringify(
+				{
+					schema_version: "evalfly.run.v1",
+					run_id: "malformed-run",
+					suite: "smoke",
+					config_name: "Smoke suite",
+					created_at: "2026-06-19T12:00:00.000Z",
+					results: "not-an-array",
+					summary: {
+						total: 1,
+						passed: 1,
+						failed: 0,
+						critical_regressions: 0,
+					},
+					verdict: "pass",
+				},
+				null,
+				2,
+			),
+		);
+
+		const result = await dispatch(["report", "malformed-run"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("invalid evals/runs/malformed-run.json");
+		expect(result.stderr).toContain("results must be an array");
 	});
 });
