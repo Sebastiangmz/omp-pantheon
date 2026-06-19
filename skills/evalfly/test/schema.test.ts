@@ -54,7 +54,9 @@ describe("evalfly schema validation", () => {
 		expect(EvalCaseSchema.properties.schema_version.const).toBe(
 			"evalfly.case.v1",
 		);
-		expect(EvalRunSchema.properties.schema_version.const).toBe("evalfly.run.v1");
+		expect(EvalRunSchema.properties.schema_version.const).toBe(
+			"evalfly.run.v1",
+		);
 		expect(EvalCaseSchema.required).toContain("privacy");
 	});
 

@@ -22,7 +22,6 @@ const EvalRiskTierSchema = Type.Union([
 	Type.Literal("minor"),
 ]);
 
-
 const FileExistsAssertionSchema = Type.Object(
 	{
 		type: Type.Literal("file_exists"),
@@ -231,7 +230,9 @@ export type ValidationResult<T> =
 
 type ErrorSink = string[];
 
-export function validateEvalConfig(value: unknown): ValidationResult<EvalConfig> {
+export function validateEvalConfig(
+	value: unknown,
+): ValidationResult<EvalConfig> {
 	const errors: ErrorSink = [];
 	if (!isRecord(value)) {
 		return { ok: false, errors: ["$ must be an object"] };
@@ -240,7 +241,9 @@ export function validateEvalConfig(value: unknown): ValidationResult<EvalConfig>
 	requireLiteral(value, "schema_version", EVAL_CONFIG_SCHEMA_VERSION, errors);
 	requireString(value, "name", errors);
 	if (Array.isArray(value.cases)) {
-		value.cases.forEach((item, index) => validateCaseInto(item, `cases[${index}]`, errors));
+		value.cases.forEach((item, index) =>
+			validateCaseInto(item, `cases[${index}]`, errors),
+		);
 	} else {
 		errors.push("cases must be an array");
 	}
@@ -266,7 +269,9 @@ export function validateEvalRun(value: unknown): ValidationResult<EvalRun> {
 	requireString(value, "config_name", errors);
 	requireString(value, "created_at", errors);
 	if (Array.isArray(value.results)) {
-		value.results.forEach((item, index) => validateRunResult(item, `results[${index}]`, errors));
+		value.results.forEach((item, index) =>
+			validateRunResult(item, `results[${index}]`, errors),
+		);
 	} else {
 		errors.push("results must be an array");
 	}
@@ -276,13 +281,22 @@ export function validateEvalRun(value: unknown): ValidationResult<EvalRun> {
 	return finish(value, errors);
 }
 
-function validateCaseInto(value: unknown, path: string, errors: ErrorSink): void {
+function validateCaseInto(
+	value: unknown,
+	path: string,
+	errors: ErrorSink,
+): void {
 	if (!isRecord(value)) {
 		errors.push(`${path} must be an object`);
 		return;
 	}
 
-	requireLiteral(value, joinPath(path, "schema_version"), EVAL_CASE_SCHEMA_VERSION, errors);
+	requireLiteral(
+		value,
+		joinPath(path, "schema_version"),
+		EVAL_CASE_SCHEMA_VERSION,
+		errors,
+	);
 	requireString(value, joinPath(path, "case_id"), errors);
 	requireString(value, joinPath(path, "title"), errors);
 	requireOneOf(value, joinPath(path, "suite"), EVAL_SUITES, errors);
@@ -302,7 +316,11 @@ function validateSource(value: unknown, path: string, errors: ErrorSink): void {
 	requireString(value, joinPath(path, "kind"), errors);
 }
 
-function validatePrivacy(value: unknown, path: string, errors: ErrorSink): void {
+function validatePrivacy(
+	value: unknown,
+	path: string,
+	errors: ErrorSink,
+): void {
 	if (!isRecord(value)) {
 		errors.push(`${path} must be an object`);
 		return;
@@ -311,7 +329,11 @@ function validatePrivacy(value: unknown, path: string, errors: ErrorSink): void 
 	requireBoolean(value, joinPath(path, "sanitized"), errors);
 }
 
-function validateExpected(value: unknown, path: string, errors: ErrorSink): void {
+function validateExpected(
+	value: unknown,
+	path: string,
+	errors: ErrorSink,
+): void {
 	if (!isRecord(value)) {
 		errors.push(`${path} must be an object`);
 		return;
@@ -322,7 +344,9 @@ function validateExpected(value: unknown, path: string, errors: ErrorSink): void
 	}
 	value.success_criteria.forEach((criterion, index) => {
 		if (typeof criterion !== "string" || criterion.length === 0) {
-			errors.push(`${joinPath(path, `success_criteria[${index}]`)} must be a non-empty string`);
+			errors.push(
+				`${joinPath(path, `success_criteria[${index}]`)} must be a non-empty string`,
+			);
 		}
 	});
 }
@@ -341,7 +365,11 @@ function validateJudge(value: unknown, path: string, errors: ErrorSink): void {
 		return;
 	}
 	value.assertions.forEach((assertion, index) => {
-		validateFileExistsAssertion(assertion, joinPath(path, `assertions[${index}]`), errors);
+		validateFileExistsAssertion(
+			assertion,
+			joinPath(path, `assertions[${index}]`),
+			errors,
+		);
 	});
 }
 
@@ -358,7 +386,11 @@ function validateFileExistsAssertion(
 	requireString(value, joinPath(path, "path"), errors);
 }
 
-function validateRunResult(value: unknown, path: string, errors: ErrorSink): void {
+function validateRunResult(
+	value: unknown,
+	path: string,
+	errors: ErrorSink,
+): void {
 	if (!isRecord(value)) {
 		errors.push(`${path} must be an object`);
 		return;
@@ -380,7 +412,11 @@ function validateRunResult(value: unknown, path: string, errors: ErrorSink): voi
 	});
 }
 
-function validateRunSummary(value: unknown, path: string, errors: ErrorSink): void {
+function validateRunSummary(
+	value: unknown,
+	path: string,
+	errors: ErrorSink,
+): void {
 	if (!isRecord(value)) {
 		errors.push(`${path} must be an object`);
 		return;
@@ -388,17 +424,29 @@ function validateRunSummary(value: unknown, path: string, errors: ErrorSink): vo
 	requireNonNegativeInteger(value, joinPath(path, "total"), errors);
 	requireNonNegativeInteger(value, joinPath(path, "passed"), errors);
 	requireNonNegativeInteger(value, joinPath(path, "failed"), errors);
-	requireNonNegativeInteger(value, joinPath(path, "critical_regressions"), errors);
+	requireNonNegativeInteger(
+		value,
+		joinPath(path, "critical_regressions"),
+		errors,
+	);
 }
 
-function requireString(value: Record<string, unknown>, path: string, errors: ErrorSink): void {
+function requireString(
+	value: Record<string, unknown>,
+	path: string,
+	errors: ErrorSink,
+): void {
 	const field = fieldName(path);
 	if (typeof value[field] !== "string" || value[field].length === 0) {
 		errors.push(`${path} must be a non-empty string`);
 	}
 }
 
-function requireBoolean(value: Record<string, unknown>, path: string, errors: ErrorSink): void {
+function requireBoolean(
+	value: Record<string, unknown>,
+	path: string,
+	errors: ErrorSink,
+): void {
 	const field = fieldName(path);
 	if (typeof value[field] !== "boolean") {
 		errors.push(`${path} must be a boolean`);

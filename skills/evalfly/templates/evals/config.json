@@ -1,35 +1,35 @@
 {
-  "schema_version": "evalfly.config.v1",
-  "name": "EvalFly template smoke suite",
-  "cases": [
-    {
-      "schema_version": "evalfly.case.v1",
-      "case_id": "example-readme-exists",
-      "title": "README exists",
-      "suite": "smoke",
-      "risk_tier": "critical",
-      "task_type": "repository_smoke",
-      "source": {
-        "kind": "template"
-      },
-      "privacy": {
-        "classification": "public",
-        "sanitized": true
-      },
-      "expected": {
-        "success_criteria": [
-          "The project README.md exists at the repository root."
-        ]
-      },
-      "judge": {
-        "type": "deterministic",
-        "assertions": [
-          {
-            "type": "file_exists",
-            "path": "README.md"
-          }
-        ]
-      }
-    }
-  ]
+	"schema_version": "evalfly.config.v1",
+	"name": "EvalFly template smoke suite",
+	"cases": [
+		{
+			"schema_version": "evalfly.case.v1",
+			"case_id": "example-readme-exists",
+			"title": "README exists",
+			"suite": "smoke",
+			"risk_tier": "critical",
+			"task_type": "repository_smoke",
+			"source": {
+				"kind": "template"
+			},
+			"privacy": {
+				"classification": "public",
+				"sanitized": true
+			},
+			"expected": {
+				"success_criteria": [
+					"The project README.md exists at the repository root."
+				]
+			},
+			"judge": {
+				"type": "deterministic",
+				"assertions": [
+					{
+						"type": "file_exists",
+						"path": "README.md"
+					}
+				]
+			}
+		}
+	]
 }

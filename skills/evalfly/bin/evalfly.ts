@@ -47,14 +47,21 @@ type RunRecord = {
 	verdict: "pass" | "fail";
 };
 
-export async function dispatch(args: string[], opts: DispatchOptions = {}): Promise<DispatchResult> {
+export async function dispatch(
+	args: string[],
+	opts: DispatchOptions = {},
+): Promise<DispatchResult> {
 	const command = args[0];
 	const cwd = opts.cwd ?? process.cwd();
 
 	try {
 		if (command === "validate") {
 			const config = await loadConfig(cwd);
-			return { exitCode: 0, stdout: `evalfly config valid: ${config.name}\n`, stderr: "" };
+			return {
+				exitCode: 0,
+				stdout: `evalfly config valid: ${config.name}\n`,
+				stderr: "",
+			};
 		}
 		if (command === "run") {
 			return await runCommand(args.slice(1), cwd, opts);
@@ -68,19 +75,31 @@ export async function dispatch(args: string[], opts: DispatchOptions = {}): Prom
 			stderr: `unknown command: ${command ?? "(none)"}\nUsage: evalfly validate | run --suite smoke | report <run-id>\n`,
 		};
 	} catch (error) {
-		return { exitCode: 1, stdout: "", stderr: `${error instanceof Error ? error.message : String(error)}\n` };
+		return {
+			exitCode: 1,
+			stdout: "",
+			stderr: `${error instanceof Error ? error.message : String(error)}\n`,
+		};
 	}
 }
 
-async function runCommand(args: string[], cwd: string, opts: DispatchOptions): Promise<DispatchResult> {
+async function runCommand(
+	args: string[],
+	cwd: string,
+	opts: DispatchOptions,
+): Promise<DispatchResult> {
 	const suite = parseSuite(args);
 	const config = await loadConfig(cwd);
 	const cases = config.cases.filter((testCase) => testCase.suite === suite);
 	const createdAt = (opts.now?.() ?? new Date()).toISOString();
 	const runId = opts.runId ?? defaultRunId(suite, createdAt);
-	const results = await Promise.all(cases.map((testCase) => evaluateCase(cwd, testCase)));
+	const results = await Promise.all(
+		cases.map((testCase) => evaluateCase(cwd, testCase)),
+	);
 	const failed = results.filter((result) => !result.passed).length;
-	const criticalRegressions = results.filter((result) => result.critical && !result.passed).length;
+	const criticalRegressions = results.filter(
+		(result) => result.critical && !result.passed,
+	).length;
 	const run: RunRecord = {
 		schema_version: EVAL_RUN_SCHEMA_VERSION,
 		run_id: runId,
@@ -107,7 +126,10 @@ async function runCommand(args: string[], cwd: string, opts: DispatchOptions): P
 	};
 }
 
-async function reportCommand(args: string[], cwd: string): Promise<DispatchResult> {
+async function reportCommand(
+	args: string[],
+	cwd: string,
+): Promise<DispatchResult> {
 	const runId = args[0];
 	if (!runId) {
 		return { exitCode: 1, stdout: "", stderr: "report requires a run id\n" };
@@ -115,7 +137,11 @@ async function reportCommand(args: string[], cwd: string): Promise<DispatchResul
 	const runPath = join(cwd, "evals", "runs", `${runId}.json`);
 	const run = JSON.parse(await readFile(runPath, "utf8")) as RunRecord;
 	await writeReport(cwd, run);
-	return { exitCode: 0, stdout: `evalfly report written: ${join("evals", "reports", `${runId}.md`)}\n`, stderr: "" };
+	return {
+		exitCode: 0,
+		stdout: `evalfly report written: ${join("evals", "reports", `${runId}.md`)}\n`,
+		stderr: "",
+	};
 }
 
 async function loadConfig(cwd: string): Promise<EvalConfig> {
@@ -124,17 +150,25 @@ async function loadConfig(cwd: string): Promise<EvalConfig> {
 	try {
 		parsed = JSON.parse(await readFile(configPath, "utf8"));
 	} catch (error) {
-		throw new Error(`failed to read evals/config.json: ${error instanceof Error ? error.message : String(error)}`);
+		throw new Error(
+			`failed to read evals/config.json: ${error instanceof Error ? error.message : String(error)}`,
+		);
 	}
 	const result = validateEvalConfig(parsed);
 	if (!result.ok) {
-		throw new Error(`invalid evals/config.json:\n${formatValidationErrors(parsed, result.errors).join("\n")}`);
+		throw new Error(
+			`invalid evals/config.json:\n${formatValidationErrors(parsed, result.errors).join("\n")}`,
+		);
 	}
 	return result.value;
 }
 
 function formatValidationErrors(config: unknown, errors: string[]): string[] {
-	if (typeof config !== "object" || config === null || !Array.isArray((config as { cases?: unknown }).cases)) {
+	if (
+		typeof config !== "object" ||
+		config === null ||
+		!Array.isArray((config as { cases?: unknown }).cases)
+	) {
 		return errors;
 	}
 	const cases = (config as { cases: unknown[] }).cases;
@@ -148,7 +182,9 @@ function formatValidationErrors(config: unknown, errors: string[]): string[] {
 			return error;
 		}
 		const received = (testCase as Record<string, unknown>)[match[2]];
-		return typeof received === "string" ? `${error} (received: ${received})` : error;
+		return typeof received === "string"
+			? `${error} (received: ${received})`
+			: error;
 	});
 }
 
@@ -161,7 +197,10 @@ function parseSuite(args: string[]): EvalSuite {
 	return suite;
 }
 
-async function evaluateCase(cwd: string, testCase: EvalCase): Promise<CaseResult> {
+async function evaluateCase(
+	cwd: string,
+	testCase: EvalCase,
+): Promise<CaseResult> {
 	const errors: string[] = [];
 	if (testCase.judge.type !== "deterministic") {
 		errors.push(`unsupported judge type: ${testCase.judge.type}`);
@@ -173,7 +212,10 @@ async function evaluateCase(cwd: string, testCase: EvalCase): Promise<CaseResult
 					errors.push(unsafeReason);
 					continue;
 				}
-				const symlinkReason = await resolvedFileExistsPathEscapesCwd(cwd, assertion.path);
+				const symlinkReason = await resolvedFileExistsPathEscapesCwd(
+					cwd,
+					assertion.path,
+				);
 				if (symlinkReason) {
 					errors.push(symlinkReason);
 					continue;
@@ -204,13 +246,21 @@ function unsafeFileExistsPath(cwd: string, path: string): string | undefined {
 		return `unsafe file_exists path: ${path} (file_exists path must stay within cwd)`;
 	}
 	const relativePath = relative(cwd, resolve(cwd, path));
-	if (relativePath === "" || relativePath === ".." || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) {
+	if (
+		relativePath === "" ||
+		relativePath === ".." ||
+		relativePath.startsWith(`..${sep}`) ||
+		isAbsolute(relativePath)
+	) {
 		return `unsafe file_exists path: ${path} (file_exists path must stay within cwd)`;
 	}
 	return undefined;
 }
 
-async function resolvedFileExistsPathEscapesCwd(cwd: string, path: string): Promise<string | undefined> {
+async function resolvedFileExistsPathEscapesCwd(
+	cwd: string,
+	path: string,
+): Promise<string | undefined> {
 	const realCwd = await realpath(cwd);
 	const absolutePath = resolve(cwd, path);
 	let existingPath = absolutePath;
@@ -218,7 +268,11 @@ async function resolvedFileExistsPathEscapesCwd(cwd: string, path: string): Prom
 		try {
 			const realExistingPath = await realpath(existingPath);
 			const realRelativePath = relative(realCwd, realExistingPath);
-			if (realRelativePath === ".." || realRelativePath.startsWith(`..${sep}`) || isAbsolute(realRelativePath)) {
+			if (
+				realRelativePath === ".." ||
+				realRelativePath.startsWith(`..${sep}`) ||
+				isAbsolute(realRelativePath)
+			) {
 				return `unsafe file_exists path: ${path} (file_exists path must stay within cwd)`;
 			}
 			return undefined;
@@ -247,7 +301,10 @@ function missingPathError(error: unknown): boolean {
 async function writeRun(cwd: string, run: RunRecord): Promise<void> {
 	const runsDir = join(cwd, "evals", "runs");
 	await mkdir(runsDir, { recursive: true });
-	await writeFile(join(runsDir, `${run.run_id}.json`), `${JSON.stringify(run, null, 2)}\n`);
+	await writeFile(
+		join(runsDir, `${run.run_id}.json`),
+		`${JSON.stringify(run, null, 2)}\n`,
+	);
 }
 
 async function writeReport(cwd: string, run: RunRecord): Promise<void> {
@@ -257,7 +314,9 @@ async function writeReport(cwd: string, run: RunRecord): Promise<void> {
 }
 
 function renderReport(run: RunRecord): string {
-	const privacyStatus = run.results.every((result) => result.privacy.sanitized) ? "sanitized" : "unsanitized";
+	const privacyStatus = run.results.every((result) => result.privacy.sanitized)
+		? "sanitized"
+		: "unsanitized";
 	const lines = [
 		`# EvalFly Report ${run.run_id}`,
 		"",
@@ -281,7 +340,6 @@ function renderReport(run: RunRecord): string {
 function defaultRunId(suite: EvalSuite, createdAt: string): string {
 	return `run-${suite}-${createdAt.replace(/[^0-9]/g, "").slice(0, 14)}`;
 }
-
 
 if (import.meta.main) {
 	const result = await dispatch(process.argv.slice(2));
