@@ -21,10 +21,28 @@ Behavior rules:
 - Keep test names descriptive and behavior-oriented.
 - When useful, mention what is still untested.
 
+
+## Evaluation Flywheel planning
+
+For each acceptance criterion in the spec, decide and record whether evidence coverage is `unit`, `integration`, `evalfly`, or `no-eval`.
+
+Use deterministic-first coverage: prefer unit or integration tests whenever they can prove the criterion. Create or update EvalFly cases only when the spec requires evals through `evalApplicability: required`; do not invent EvalFly work for specs marked `not_applicable`.
+
+EvalFly remains opt-in evidence tooling. Do not describe EvalFly cases as hook enforcement, CI enforcement, or a substitute for deterministic test coverage.
+
+When EvalFly is required:
+- Map each `evalfly` acceptance criterion to the spec's `evalTargets`, `riskTier`, and `failureModes`.
+- Create or update the smallest useful EvalFly suite/case set that exercises the required EvalFly suite expectations.
+- Keep ordinary RED tests for deterministic behavior before EvalFly evidence.
+- Report every EvalFly file and case in yield data via `evalFiles` and `evalCases`.
+
+When EvalFly is not applicable, keep the coverage row as `unit`, `integration`, or `no-eval` and preserve the spec's reason rather than adding placeholder eval cases.
+
 Your final response must include:
 - Which tests you added or changed.
 - What behavior those tests lock in.
 - Any blockers or ambiguities.
+- EvalFly files/cases added or changed, or an explicit empty list when the spec does not require evals.
 
 ## Latest-docs directive
 
@@ -91,6 +109,13 @@ This contract is enforced by convention when no `outputSchema` is provided. When
     testFile: string,
     scenarios: string[],                              // 1-line description per scenario
   }>,
+  acceptanceCoverage: Array<{
+    acceptanceId: string,
+    coverage: "unit" | "integration" | "evalfly" | "no-eval",
+    evidence: string[],
+  }>,
+  evalFiles: string[],                                // EvalFly suite/case files created or updated; [] when no evals required
+  evalCases: Array<{ suite: string, caseId: string, target: string }>,
   expectedStatus: "RED" | "GREEN" | "MIXED",          // RED for pre-implementation
   uncoveredAcceptance?: string[],                     // ACs the spec couldn't make testable
 }
@@ -109,6 +134,14 @@ Worked example:
   "reqCoverage": [
     { "reqId": "REQ-005", "testFile": "packages/auth/test/invitation-lifecycle-max-uses.test.ts",
       "scenarios": ["max_uses=1 single accept succeeds", "max_uses=1 second accept rejects with signup_not_allowed", "max_uses=3 third accept succeeds, fourth rejects", "concurrent CAS races resolve atomically"] }
+  ],
+  "acceptanceCoverage": [
+    { "acceptanceId": "AC-REQ-005-1", "coverage": "unit", "evidence": ["packages/auth/test/invitation-lifecycle-max-uses.test.ts"] },
+    { "acceptanceId": "AC-REQ-005-2", "coverage": "evalfly", "evidence": ["evals/invitation-handoff.eval.yaml#max-uses-race"] }
+  ],
+  "evalFiles": ["evals/invitation-handoff.eval.yaml"],
+  "evalCases": [
+    { "suite": "invitation-handoff", "caseId": "max-uses-race", "target": "test-writer invitation lifecycle handoff" }
   ],
   "expectedStatus": "RED"
 }
