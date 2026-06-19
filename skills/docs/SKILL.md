@@ -55,7 +55,7 @@ Without `--i-approve`: prints the full diff + `"NOT YET APPLIED (rerun with --i-
 With `--i-approve`:
 1. Verifies working tree is clean (`git status --porcelain` must be empty).
 2. Applies the patch with `git apply --index`.
-3. Reads `.pi/.honcho-state.json` to determine if a SpecSafe slice is open.
+3. Reads `.pi/.specsafe-state.json` to determine if a SpecSafe slice is open.
 4. Commits with structured trailers:
    ```
    docs: <rationale>
