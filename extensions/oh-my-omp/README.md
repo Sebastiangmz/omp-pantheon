@@ -33,8 +33,10 @@ the Seshat/SpecSafe runtime into the local harness.
 - Pantheon: `ai-slop-remover`, `dev-browser`, `frontend-ui-ux`, `git-master`,
   `hyperplan`, `playwright`, `playwright-cli`, `remove-deadcode`,
   `review-work`, `security-research`, `tech-debt-audit`.
-- Seshat/SpecSafe: `bootstrap`, `coherence`, `docs`, `env-doctor`, `github`,
-  `latest-docs`, `linear`, `push`, `specsafe`.
+- Seshat/SpecSafe: `bootstrap`, `coherence`, `docs`, `env-doctor`,
+  `evaluation-flywheel`, `github`, `latest-docs`, `linear`, `push`, `specsafe`.
+- EvalFly: opt-in templates and CLI under `skills/evalfly/` for deterministic
+  validation/run/report evidence; it is not registered as a hook or CI gate.
 
 ### Hooks
 - Agent hooks: `specsafe-session`, `specsafe-subagents`, `i-approve`,
