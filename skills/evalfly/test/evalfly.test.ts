@@ -143,6 +143,73 @@ describe("evalfly CLI", () => {
 		expect(report).toContain("Verdict: pass");
 	});
 
+	test("run links current SpecSafe slice by reference without mutating state", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, ".pi"), { recursive: true });
+		await writeFile(join(cwd, "expected.txt"), "ok");
+		const statePath = join(cwd, ".pi", ".specsafe-state.json");
+		const state = `${JSON.stringify(
+			{
+				currentSlice: {
+					id: "SPEC-20260619-001",
+					workspaceId: "ws-abc",
+					sessionId: "sess-abc",
+					beganAt: "2026-06-19T11:00:00.000Z",
+					costCounter: {
+						externalMemoryCalls: 0,
+						externalMemoryCost: 0,
+						subagentTokens: {
+							input: 0,
+							output: 0,
+							cacheRead: 0,
+							cacheWrite: 0,
+							cost: 0,
+							turns: 0,
+						},
+					},
+				},
+				history: [],
+			},
+			null,
+			2,
+		)}\n`;
+		await writeFile(statePath, state);
+
+		const result = await dispatch(
+			["run", "--suite", "smoke", "--commit-range", "main..HEAD"],
+			{
+				cwd,
+				now: () => new Date("2026-06-19T12:00:00.000Z"),
+				runId: "run-specsafe-linkage",
+			},
+		);
+
+		expect(result.exitCode).toBe(0);
+		expect(await readFile(statePath, "utf8")).toBe(state);
+		const run = JSON.parse(
+			await readFile(
+				join(cwd, "evals", "runs", "run-specsafe-linkage.json"),
+				"utf8",
+			),
+		);
+		expect(run.context).toEqual({
+			spec_slice: "SPEC-20260619-001",
+			session_id: "sess-abc",
+			commit_range: "main..HEAD",
+			eval_report_path: "evals/reports/run-specsafe-linkage.md",
+		});
+		const report = await readFile(
+			join(cwd, "evals", "reports", "run-specsafe-linkage.md"),
+			"utf8",
+		);
+		expect(report).toContain("Spec-Slice: SPEC-20260619-001");
+		expect(report).toContain("Session: sess-abc");
+		expect(report).toContain("Commit range: main..HEAD");
+		expect(report).toContain(
+			"evalReportPath: evals/reports/run-specsafe-linkage.md",
+		);
+	});
+
 	test("missing file_exists critical case produces fail verdict and nonzero exit", async () => {
 		const cwd = await makeProject();
 

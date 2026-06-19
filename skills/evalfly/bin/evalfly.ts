@@ -5,7 +5,7 @@ import {
 	EVAL_RUN_SCHEMA_VERSION,
 	type EvalCase,
 	type EvalConfig,
-	type EvalRun,
+	type EvalRunContext,
 	type EvalSuite,
 	validateEvalConfig,
 	validateEvalRun,
@@ -79,6 +79,7 @@ async function runCommand(
 	opts: DispatchOptions,
 ): Promise<DispatchResult> {
 	const suite = parseSuite(args);
+	const commitRange = parseOptionalFlag(args, "--commit-range");
 	const config = await loadConfig(cwd);
 	const cases = config.cases.filter((testCase) => testCase.suite === suite);
 	if (cases.length === 0) {
@@ -87,6 +88,7 @@ async function runCommand(
 	const createdAt = (opts.now?.() ?? new Date()).toISOString();
 	const runId = opts.runId ?? defaultRunId(suite, createdAt);
 	assertSafeRunId(runId);
+	const context = await buildRunContext(cwd, runId, commitRange);
 	const results = await Promise.all(
 		cases.map((testCase) => evaluateCase(cwd, testCase)),
 	);
@@ -100,6 +102,7 @@ async function runCommand(
 		suite,
 		config_name: config.name,
 		created_at: createdAt,
+		context,
 		results,
 		summary: {
 			total: results.length,
@@ -202,6 +205,61 @@ function parseSuite(args: string[]): EvalSuite {
 		throw new Error("run requires --suite smoke");
 	}
 	return suite;
+}
+
+function parseOptionalFlag(args: string[], flag: string): string | undefined {
+	const index = args.indexOf(flag);
+	if (index === -1) {
+		return undefined;
+	}
+	const value = args[index + 1];
+	if (!value) {
+		throw new Error(`${flag} requires a value`);
+	}
+	return value;
+}
+
+async function buildRunContext(
+	cwd: string,
+	runId: string,
+	commitRange: string | undefined,
+): Promise<EvalRunContext> {
+	const slice = await readCurrentSpecSafeSlice(cwd);
+	return {
+		...(slice?.id ? { spec_slice: slice.id } : {}),
+		...(slice?.sessionId ? { session_id: slice.sessionId } : {}),
+		...(commitRange ? { commit_range: commitRange } : {}),
+		eval_report_path: join("evals", "reports", `${runId}.md`),
+	};
+}
+
+async function readCurrentSpecSafeSlice(
+	cwd: string,
+): Promise<{ id?: string; sessionId?: string } | undefined> {
+	try {
+		const parsed = JSON.parse(
+			await readFile(join(cwd, ".pi", ".specsafe-state.json"), "utf8"),
+		);
+		const slice =
+			typeof parsed === "object" && parsed !== null
+				? (parsed as { currentSlice?: unknown }).currentSlice
+				: undefined;
+		if (typeof slice !== "object" || slice === null) {
+			return undefined;
+		}
+		return {
+			id:
+				typeof (slice as { id?: unknown }).id === "string"
+					? (slice as { id: string }).id
+					: undefined,
+			sessionId:
+				typeof (slice as { sessionId?: unknown }).sessionId === "string"
+					? (slice as { sessionId: string }).sessionId
+					: undefined,
+		};
+	} catch {
+		return undefined;
+	}
 }
 
 async function evaluateCase(
@@ -334,6 +392,12 @@ function renderReport(run: RunRecord): string {
 		`Failed: ${run.summary.failed}`,
 		`critical_regressions: ${run.summary.critical_regressions}`,
 		`Privacy: ${privacyStatus}`,
+		"",
+		"## Context",
+		`Spec-Slice: ${run.context?.spec_slice ?? "not linked"}`,
+		`Session: ${run.context?.session_id ?? "not linked"}`,
+		`Commit range: ${run.context?.commit_range ?? "not linked"}`,
+		`evalReportPath: ${run.context?.eval_report_path ?? join("evals", "reports", `${run.run_id}.md`)}`,
 		"",
 		"## Results",
 	];
