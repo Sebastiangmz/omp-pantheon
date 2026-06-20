@@ -583,6 +583,69 @@ describe("evalfly CLI", () => {
 		expect(report).toContain("critical_regressions: 1");
 	});
 
+	test("latest prints the newest valid run and report path", async () => {
+		const cwd = await makeProject();
+		await writeFile(join(cwd, "expected.txt"), "ok");
+		await dispatch(["run", "--suite", "smoke"], {
+			cwd,
+			now: () => new Date("2026-06-19T12:00:00.000Z"),
+			runId: "run-older",
+		});
+		await dispatch(["run", "--suite", "smoke"], {
+			cwd,
+			now: () => new Date("2026-06-20T12:00:00.000Z"),
+			runId: "run-newer",
+		});
+
+		const result = await dispatch(["latest"], { cwd });
+
+		expect(result.exitCode).toBe(0);
+		expect(result.stderr).toBe("");
+		expect(result.stdout).toContain("latest evalfly run: run-newer");
+		expect(result.stdout).toContain("verdict: pass");
+		expect(result.stdout).toContain("suite: smoke");
+		expect(result.stdout).toContain("report: evals/reports/run-newer.md");
+		expect(result.stdout).not.toContain("run-older");
+	});
+
+	test("latest rejects malformed saved run records instead of hiding them", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, "evals", "runs"), { recursive: true });
+		await writeFile(
+			join(cwd, "evals", "runs", "broken.json"),
+			JSON.stringify({
+				schema_version: "evalfly.run.v1",
+				run_id: "broken",
+				suite: "smoke",
+				config_name: "Smoke suite",
+				created_at: "2026-06-20T12:00:00.000Z",
+				results: "not-an-array",
+				summary: {
+					total: 0,
+					passed: 0,
+					failed: 0,
+					critical_regressions: 0,
+				},
+				verdict: "pass",
+			}),
+		);
+
+		const result = await dispatch(["latest"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("invalid evals/runs/broken.json");
+		expect(result.stderr).toContain("results must be an array");
+	});
+
+	test("latest fails clearly when no run artifacts exist", async () => {
+		const cwd = await makeProject();
+
+		const result = await dispatch(["latest"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("no evalfly runs found");
+	});
+
 	test("report rejects unsafe run ids before reading run artifacts", async () => {
 		const cwd = await makeProject();
 

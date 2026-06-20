@@ -3,6 +3,7 @@ import {
 	lstat,
 	mkdir,
 	readFile,
+	readdir,
 	realpath,
 	writeFile,
 } from "node:fs/promises";
@@ -33,7 +34,7 @@ const UNSANITIZED_TRACE_PATTERNS = [
 ] as const;
 
 const USAGE =
-	"Usage: evalfly validate | run --suite smoke | check --suite smoke | report <run-id> | curate-trace <raw-relative-path> <sanitized-name>";
+	"Usage: evalfly validate | run --suite smoke | check --suite smoke | latest | report <run-id> | curate-trace <raw-relative-path> <sanitized-name>";
 
 export type DispatchOptions = {
 	cwd?: string;
@@ -80,6 +81,9 @@ export async function dispatch(
 		}
 		if (command === "check") {
 			return await checkCommand(args.slice(1), cwd, opts);
+		}
+		if (command === "latest") {
+			return await latestCommand(cwd);
 		}
 		if (command === "report") {
 			return await reportCommand(args.slice(1), cwd);
@@ -199,6 +203,46 @@ async function reportCommand(
 	return {
 		exitCode: 0,
 		stdout: `evalfly report written: ${join("evals", "reports", `${runId}.md`)}\n`,
+		stderr: "",
+	};
+}
+
+async function latestCommand(cwd: string): Promise<DispatchResult> {
+	const runsDir = await ensureExactArtifactDir(cwd, ["evals", "runs"]);
+	const files = (await readdir(runsDir))
+		.filter((file) => file.endsWith(".json"))
+		.sort();
+	if (files.length === 0) {
+		throw new Error("no evalfly runs found");
+	}
+	let latest: EvalRun | undefined;
+	for (const file of files) {
+		const runId = file.slice(0, -".json".length);
+		assertSafeRunId(runId);
+		const runPath = await artifactPath(cwd, ["evals", "runs"], runId, ".json");
+		const parsed = JSON.parse(await readFile(runPath, "utf8"));
+		const result = validateEvalRun(parsed);
+		if (!result.ok) {
+			throw new Error(
+				`invalid ${join("evals", "runs", file)}:\n${result.errors.join("\n")}`,
+			);
+		}
+		assertSafeRunId(result.value.run_id);
+		if (result.value.run_id !== runId) {
+			throw new Error(
+				`run_id mismatch: requested ${runId} but saved run is ${result.value.run_id}`,
+			);
+		}
+		if (!latest || result.value.created_at > latest.created_at) {
+			latest = result.value;
+		}
+	}
+	if (!latest) {
+		throw new Error("no evalfly runs found");
+	}
+	return {
+		exitCode: 0,
+		stdout: `latest evalfly run: ${latest.run_id}\nverdict: ${latest.verdict}\nsuite: ${latest.suite}\nreport: ${latest.context?.eval_report_path ?? join("evals", "reports", `${latest.run_id}.md`)}\n`,
 		stderr: "",
 	};
 }
