@@ -1898,6 +1898,87 @@ describe("evalfly CLI", () => {
 			),
 		).rejects.toThrow();
 	});
+
+	test("audit-traces reports curation candidates without failing privacy-clean traces", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, "evals", "traces", "sanitized"), {
+			recursive: true,
+		});
+		await writeFile(
+			join(cwd, "evals", "traces", "sanitized", "expensive.json"),
+			`${JSON.stringify(
+				{
+					schema_version: "evalfly.trace.v1",
+					trace_id: "trace-expensive",
+					events: [
+						{
+							type: "message",
+							sanitized_input: "Investigate regression",
+							sanitized_output: "Reported issue",
+							cost_usd: 0.12,
+							latency_ms: 70000,
+						},
+					],
+					summary: {
+						events: 1,
+						tool_calls: 0,
+						total_cost_usd: 0.12,
+						total_latency_ms: 70000,
+					},
+				},
+				null,
+				2,
+			)}\n`,
+		);
+
+		const result = await dispatch(["audit-traces"], { cwd });
+
+		expect(result.exitCode).toBe(0);
+		expect(result.stderr).toBe("");
+		expect(result.stdout).toContain("evalfly trace audit:");
+		expect(result.stdout).toContain("traces: 1");
+		expect(result.stdout).toContain("privacy issues: 0");
+		expect(result.stdout).toContain("curation candidates: 2");
+		expect(result.stdout).toContain(
+			"curation candidate: evals/traces/sanitized/expensive.json high_cost total_cost_usd=0.12",
+		);
+		expect(result.stdout).toContain(
+			"curation candidate: evals/traces/sanitized/expensive.json high_latency total_latency_ms=70000",
+		);
+	});
+
+	test("audit-traces fails when a sanitized trace still contains raw fields", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, "evals", "traces", "sanitized"), {
+			recursive: true,
+		});
+		await writeFile(
+			join(cwd, "evals", "traces", "sanitized", "raw-field.json"),
+			`${JSON.stringify(
+				{
+					schema_version: "evalfly.trace.v1",
+					events: [
+						{
+							type: "message",
+							content: "raw prompt should not be committed",
+							sanitized_output: "safe summary",
+						},
+					],
+				},
+				null,
+				2,
+			)}\n`,
+		);
+
+		const result = await dispatch(["audit-traces"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toBe("");
+		expect(result.stdout).toContain("privacy issues: 1");
+		expect(result.stdout).toContain(
+			"privacy issue: evals/traces/sanitized/raw-field.json raw field events[0].content",
+		);
+	});
 	test("curate-trace refuses unsafe sanitized trace names", async () => {
 		const cwd = await makeProject();
 		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });
