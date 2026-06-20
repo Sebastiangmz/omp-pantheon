@@ -6,10 +6,11 @@
  *   - Register the loop runtime (ralph / ulw) and hook it to `agent_end`,
  *     plus the loop control commands (`/ralph-loop`, `/ulw-loop`,
  *     `/cancel-ralph`, `/stop-continuation`).
- *   - Register the lifecycle hooks: `todo-enforcer` (session_stop
- *     continuation), `evalfly-advisor` (opt-in non-blocking evidence reminder),
- *     `comment-checker` (tool_result on edit/write), `intent-gate`
- *     (before_agent_start directive).
+ *   - Register the lifecycle hooks: `evalfly-enforcement-gate` and
+ *     `todo-enforcer` (session_stop continuations), `evalfly-trace-capture`
+ *     (opt-in sanitized metadata buffer), `evalfly-advisor` (non-blocking
+ *     evidence reminder), `comment-checker` (tool_result on edit/write),
+ *     `intent-gate` (before_agent_start directive).
  *   - Markdown slash commands (/ulw, /ultrawork, /init-deep, /refactor,
  *     /handoff, /start-work, /remove-ai-slops, /omomomo), agents, and
  *     skills ship as plain files discovered by OMP; nothing to wire here.
@@ -18,8 +19,10 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 
-import { registerEvalFlyAdvisor } from "./hooks/evalfly-advisor";
+import { registerEvalFlyEnforcementGate } from "./evalfly/enforcement-gate";
+import { registerEvalFlyTraceCapture } from "./evalfly/trace-buffer";
 import { registerCommentChecker } from "./hooks/comment-checker";
+import { registerEvalFlyAdvisor } from "./hooks/evalfly-advisor";
 import { registerIntentGate } from "./hooks/intent-gate";
 import { registerTodoEnforcer } from "./hooks/todo-enforcer";
 import { registerLoopCommands } from "./loop/commands";
@@ -55,6 +58,8 @@ export default async function (pi: ExtensionAPI): Promise<void> {
 	registerLoopCommands(pi, runtime);
 
 	// Lifecycle hooks: advisory context plus discipline enforcement.
+	registerEvalFlyEnforcementGate(pi);
+	registerEvalFlyTraceCapture(pi);
 	registerEvalFlyAdvisor(pi);
 	registerTodoEnforcer(pi);
 	registerCommentChecker(pi);
