@@ -143,6 +143,56 @@ describe("evalfly CLI", () => {
 		expect(report).toContain("Verdict: pass");
 	});
 
+	test("check --suite smoke runs the suite and prints the report path", async () => {
+		const cwd = await makeProject();
+		await writeFile(join(cwd, "expected.txt"), "ok");
+
+		const result = await dispatch(
+			["check", "--suite", "smoke", "--commit-range", "main..HEAD"],
+			{
+				cwd,
+				now: () => new Date("2026-06-19T12:00:00.000Z"),
+				runId: "run-check-pass",
+			},
+		);
+
+		expect(result.exitCode).toBe(0);
+		expect(result.stderr).toBe("");
+		expect(result.stdout).toContain("evalfly check run-check-pass: pass");
+		expect(result.stdout).toContain("report: evals/reports/run-check-pass.md");
+		const run = JSON.parse(
+			await readFile(join(cwd, "evals", "runs", "run-check-pass.json"), "utf8"),
+		);
+		expect(run.verdict).toBe("pass");
+		expect(run.context.commit_range).toBe("main..HEAD");
+		await expect(
+			readFile(join(cwd, "evals", "reports", "run-check-pass.md"), "utf8"),
+		).resolves.toContain("Verdict: pass");
+	});
+
+	test("check --suite smoke returns nonzero while preserving failed evidence", async () => {
+		const cwd = await makeProject();
+
+		const result = await dispatch(["check", "--suite", "smoke"], {
+			cwd,
+			now: () => new Date("2026-06-19T12:00:00.000Z"),
+			runId: "run-check-fail",
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toBe("");
+		expect(result.stdout).toContain("evalfly check run-check-fail: fail");
+		expect(result.stdout).toContain("report: evals/reports/run-check-fail.md");
+		const run = JSON.parse(
+			await readFile(join(cwd, "evals", "runs", "run-check-fail.json"), "utf8"),
+		);
+		expect(run.verdict).toBe("fail");
+		expect(run.summary.critical_regressions).toBe(1);
+		await expect(
+			readFile(join(cwd, "evals", "reports", "run-check-fail.md"), "utf8"),
+		).resolves.toContain("Verdict: fail");
+	});
+
 	test("run links current SpecSafe slice by reference without mutating state", async () => {
 		const cwd = await makeProject();
 		await mkdir(join(cwd, ".pi"), { recursive: true });

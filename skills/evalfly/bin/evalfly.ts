@@ -32,6 +32,9 @@ const UNSANITIZED_TRACE_PATTERNS = [
 	/https?:\/\/(?:localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)/i,
 ] as const;
 
+const USAGE =
+	"Usage: evalfly validate | run --suite smoke | check --suite smoke | report <run-id> | curate-trace <raw-relative-path> <sanitized-name>";
+
 export type DispatchOptions = {
 	cwd?: string;
 	now?: () => Date;
@@ -75,6 +78,9 @@ export async function dispatch(
 		if (command === "run") {
 			return await runCommand(args.slice(1), cwd, opts);
 		}
+		if (command === "check") {
+			return await checkCommand(args.slice(1), cwd, opts);
+		}
 		if (command === "report") {
 			return await reportCommand(args.slice(1), cwd);
 		}
@@ -84,7 +90,7 @@ export async function dispatch(
 		return {
 			exitCode: 1,
 			stdout: "",
-			stderr: `unknown command: ${command ?? "(none)"}\nUsage: evalfly validate | run --suite smoke | report <run-id> | curate-trace <raw-relative-path> <sanitized-name>\n`,
+			stderr: `unknown command: ${command ?? "(none)"}\n${USAGE}\n`,
 		};
 	} catch (error) {
 		return {
@@ -100,6 +106,32 @@ async function runCommand(
 	cwd: string,
 	opts: DispatchOptions,
 ): Promise<DispatchResult> {
+	const run = await executeRun(args, cwd, opts);
+	return {
+		exitCode: run.verdict === "pass" ? 0 : 1,
+		stdout: `evalfly run ${run.run_id}: ${run.verdict}\n`,
+		stderr: "",
+	};
+}
+
+async function checkCommand(
+	args: string[],
+	cwd: string,
+	opts: DispatchOptions,
+): Promise<DispatchResult> {
+	const run = await executeRun(args, cwd, opts);
+	return {
+		exitCode: run.verdict === "pass" ? 0 : 1,
+		stdout: `evalfly check ${run.run_id}: ${run.verdict}\nreport: ${run.context?.eval_report_path ?? join("evals", "reports", `${run.run_id}.md`)}\n`,
+		stderr: "",
+	};
+}
+
+async function executeRun(
+	args: string[],
+	cwd: string,
+	opts: DispatchOptions,
+): Promise<RunRecord> {
 	const suite = parseSuite(args);
 	const commitRange = parseOptionalFlag(args, "--commit-range");
 	const config = await loadConfig(cwd);
@@ -137,12 +169,7 @@ async function runCommand(
 
 	await writeRun(cwd, run);
 	await writeReport(cwd, run);
-
-	return {
-		exitCode: run.verdict === "pass" ? 0 : 1,
-		stdout: `evalfly run ${run.run_id}: ${run.verdict}\n`,
-		stderr: "",
-	};
+	return run;
 }
 
 async function reportCommand(
