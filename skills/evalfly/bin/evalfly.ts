@@ -560,9 +560,9 @@ function normalizeTraceJsonl(content: string): Record<string, unknown> {
 		let parsed: unknown;
 		try {
 			parsed = JSON.parse(line);
-		} catch (error) {
+		} catch {
 			throw new Error(
-				`invalid raw trace JSONL line ${index + 1}: ${error instanceof Error ? error.message : String(error)}`,
+				`invalid raw trace JSONL line ${index + 1}: expected JSON object`,
 			);
 		}
 		if (!isRecord(parsed)) {
