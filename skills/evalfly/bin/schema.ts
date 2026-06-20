@@ -103,6 +103,16 @@ export const EvalConfigSchema = Type.Object(
 	{ additionalProperties: false },
 );
 
+const EvalRunContextSchema = Type.Object(
+	{
+		spec_slice: Type.Optional(nonEmptyString),
+		session_id: Type.Optional(nonEmptyString),
+		commit_range: Type.Optional(nonEmptyString),
+		eval_report_path: nonEmptyString,
+	},
+	{ additionalProperties: false },
+);
+
 const EvalRunSummarySchema = Type.Object(
 	{
 		total: Type.Integer({ minimum: 0 }),
@@ -133,6 +143,7 @@ export const EvalRunSchema = Type.Object(
 		suite: EvalSuiteSchema,
 		config_name: nonEmptyString,
 		created_at: nonEmptyString,
+		context: Type.Optional(EvalRunContextSchema),
 		results: Type.Array(EvalRunResultSchema),
 		summary: EvalRunSummarySchema,
 		verdict: Type.Union([Type.Literal("pass"), Type.Literal("fail")]),
@@ -213,12 +224,20 @@ export type EvalRunResult = {
 	errors: string[];
 };
 
+export type EvalRunContext = {
+	spec_slice?: string;
+	session_id?: string;
+	commit_range?: string;
+	eval_report_path: string;
+};
+
 export type EvalRun = {
 	schema_version: typeof EVAL_RUN_SCHEMA_VERSION;
 	run_id: string;
 	suite: EvalSuite;
 	config_name: string;
 	created_at: string;
+	context?: EvalRunContext;
 	results: EvalRunResult[];
 	summary: EvalRunSummary;
 	verdict: "pass" | "fail";
@@ -281,6 +300,7 @@ export function validateEvalRun(value: unknown): ValidationResult<EvalRun> {
 			"suite",
 			"config_name",
 			"created_at",
+			"context",
 			"results",
 			"summary",
 			"verdict",
@@ -292,6 +312,9 @@ export function validateEvalRun(value: unknown): ValidationResult<EvalRun> {
 	requireOneOf(value, "suite", EVAL_SUITES, errors);
 	requireString(value, "config_name", errors);
 	requireString(value, "created_at", errors);
+	if (value.context !== undefined) {
+		validateRunContext(value.context, "context", errors);
+	}
 	if (Array.isArray(value.results)) {
 		value.results.forEach((item, index) =>
 			validateRunResult(item, `results[${index}]`, errors),
@@ -481,6 +504,29 @@ function validateRunResult(
 			errors.push(`${joinPath(path, `errors[${index}]`)} must be a string`);
 		}
 	});
+}
+
+function validateRunContext(
+	value: unknown,
+	path: string,
+	errors: ErrorSink,
+): void {
+	if (!isRecord(value)) {
+		errors.push(`${path} must be an object`);
+		return;
+	}
+	rejectUnknownProperties(
+		value,
+		path,
+		["spec_slice", "session_id", "commit_range", "eval_report_path"],
+		errors,
+	);
+	for (const field of ["spec_slice", "session_id", "commit_range"]) {
+		if (value[field] !== undefined) {
+			requireString(value, joinPath(path, field), errors);
+		}
+	}
+	requireString(value, joinPath(path, "eval_report_path"), errors);
 }
 
 function validateRunSummary(

@@ -222,6 +222,61 @@ describe("evalfly schema validation", () => {
 		expect(result.ok).toBe(true);
 	});
 
+	test("run schema accepts optional SpecSafe linkage context", () => {
+		const run: EvalRun = {
+			schema_version: "evalfly.run.v1",
+			run_id: "run-with-specsafe-context",
+			suite: "smoke",
+			config_name: validConfig.name,
+			created_at: "2026-06-19T00:00:00.000Z",
+			context: {
+				spec_slice: "SPEC-20260619-001",
+				session_id: "sess-abc",
+				commit_range: "main..HEAD",
+				eval_report_path: "evals/reports/run-with-specsafe-context.md",
+			},
+			results: [],
+			summary: {
+				total: 0,
+				passed: 0,
+				failed: 0,
+				critical_regressions: 0,
+			},
+			verdict: "pass",
+		};
+
+		expect(validateEvalRun(run)).toEqual({ ok: true, value: run });
+	});
+
+	test("run schema rejects unknown SpecSafe linkage context fields", () => {
+		const result = validateEvalRun({
+			schema_version: "evalfly.run.v1",
+			run_id: "run-with-bad-context",
+			suite: "smoke",
+			config_name: validConfig.name,
+			created_at: "2026-06-19T00:00:00.000Z",
+			context: {
+				spec_slice: "SPEC-20260619-001",
+				unexpected: "field",
+			},
+			results: [],
+			summary: {
+				total: 0,
+				passed: 0,
+				failed: 0,
+				critical_regressions: 0,
+			},
+			verdict: "pass",
+		});
+
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.errors.join("\n")).toContain(
+				"context unexpected property: unexpected",
+			);
+		}
+	});
+
 	test("run schema validates CLI run records", () => {
 		const run: EvalRun = {
 			schema_version: "evalfly.run.v1",

@@ -30,7 +30,7 @@ Run commands from the project root that contains `evals/config.json`. After inst
 
 ```bash
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts validate
-bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts run --suite smoke
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts run --suite smoke [--commit-range main..HEAD]
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts report <run-id>
 ```
 
@@ -38,12 +38,13 @@ When developing this bundle itself, the repo-local path also works:
 
 ```bash
 bun run skills/evalfly/bin/evalfly.ts validate
-bun run skills/evalfly/bin/evalfly.ts run --suite smoke
+bun run skills/evalfly/bin/evalfly.ts run --suite smoke [--commit-range main..HEAD]
 bun run skills/evalfly/bin/evalfly.ts report <run-id>
 ```
 
 - `validate` checks `evals/config.json` against the current schema.
 - `run --suite smoke` executes deterministic cases in the smoke suite and writes `evals/runs/<run-id>.json` plus `evals/reports/<run-id>.md`.
+- `run --suite smoke --commit-range main..HEAD` adds the commit range to the run context. When `.pi/.specsafe-state.json` has an open `currentSlice`, evalfly also copies `currentSlice.id` and `currentSlice.sessionId` into the run/report by reference without mutating SpecSafe state.
 - `report <run-id>` regenerates the markdown report from a saved run JSON.
 
 ## Privacy boundary

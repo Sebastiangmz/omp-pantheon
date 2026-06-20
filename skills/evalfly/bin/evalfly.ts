@@ -1,4 +1,11 @@
-import { access, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import {
+	access,
+	lstat,
+	mkdir,
+	readFile,
+	realpath,
+	writeFile,
+} from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import {
@@ -6,12 +13,14 @@ import {
 	type EvalCase,
 	type EvalConfig,
 	type EvalRun,
+	type EvalRunContext,
 	type EvalSuite,
 	validateEvalConfig,
 	validateEvalRun,
 } from "./schema.ts";
 
 const RUN_ID_TOKEN_RE = /^[A-Za-z0-9._-]+$/;
+const CONTEXT_VALUE_MAX_LENGTH = 512;
 
 export type DispatchOptions = {
 	cwd?: string;
@@ -79,6 +88,7 @@ async function runCommand(
 	opts: DispatchOptions,
 ): Promise<DispatchResult> {
 	const suite = parseSuite(args);
+	const commitRange = parseOptionalFlag(args, "--commit-range");
 	const config = await loadConfig(cwd);
 	const cases = config.cases.filter((testCase) => testCase.suite === suite);
 	if (cases.length === 0) {
@@ -87,6 +97,7 @@ async function runCommand(
 	const createdAt = (opts.now?.() ?? new Date()).toISOString();
 	const runId = opts.runId ?? defaultRunId(suite, createdAt);
 	assertSafeRunId(runId);
+	const context = await buildRunContext(cwd, runId, commitRange);
 	const results = await Promise.all(
 		cases.map((testCase) => evaluateCase(cwd, testCase)),
 	);
@@ -100,6 +111,7 @@ async function runCommand(
 		suite,
 		config_name: config.name,
 		created_at: createdAt,
+		context,
 		results,
 		summary: {
 			total: results.length,
@@ -202,6 +214,95 @@ function parseSuite(args: string[]): EvalSuite {
 		throw new Error("run requires --suite smoke");
 	}
 	return suite;
+}
+
+function parseOptionalFlag(args: string[], flag: string): string | undefined {
+	const index = args.indexOf(flag);
+	if (index === -1) {
+		return undefined;
+	}
+	const value = args[index + 1];
+	if (!value || value.startsWith("--")) {
+		throw new Error(`${flag} requires a value`);
+	}
+	assertContextLine(flag, value);
+	return value;
+}
+function assertContextLine(label: string, value: string): void {
+	if (
+		value.length > CONTEXT_VALUE_MAX_LENGTH ||
+		/[\u0000-\u001f\u007f]/.test(value)
+	) {
+		throw new Error(`${label} must be a single line`);
+	}
+}
+
+function requireContextLine(label: string, value: unknown): string {
+	if (typeof value !== "string" || value.length === 0) {
+		throw new Error(`${label} must be a non-empty string`);
+	}
+	assertContextLine(label, value);
+	return value;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+async function buildRunContext(
+	cwd: string,
+	runId: string,
+	commitRange: string | undefined,
+): Promise<EvalRunContext> {
+	const slice = await readCurrentSpecSafeSlice(cwd);
+	return {
+		...(slice?.id ? { spec_slice: slice.id } : {}),
+		...(slice?.sessionId ? { session_id: slice.sessionId } : {}),
+		...(commitRange ? { commit_range: commitRange } : {}),
+		eval_report_path: join("evals", "reports", `${runId}.md`),
+	};
+}
+
+async function readCurrentSpecSafeSlice(
+	cwd: string,
+): Promise<{ id?: string; sessionId?: string } | undefined> {
+	try {
+		const statePath = join(cwd, ".pi", ".specsafe-state.json");
+		const realCwd = await realpath(cwd);
+		const expectedStatePath = resolve(realCwd, ".pi", ".specsafe-state.json");
+		if ((await lstat(statePath)).isSymbolicLink()) {
+			return undefined;
+		}
+		if ((await realpath(statePath)) !== expectedStatePath) {
+			return undefined;
+		}
+		const parsed = JSON.parse(await readFile(statePath, "utf8"));
+		if (
+			!isRecord(parsed) ||
+			!("currentSlice" in parsed) ||
+			!Array.isArray(parsed.history)
+		) {
+			throw new Error("malformed SpecSafe state");
+		}
+		const slice = parsed.currentSlice;
+		if (slice === null) {
+			return undefined;
+		}
+		if (!isRecord(slice)) {
+			throw new Error("malformed SpecSafe currentSlice");
+		}
+		return {
+			id: requireContextLine("currentSlice.id", slice.id),
+			sessionId: requireContextLine("currentSlice.sessionId", slice.sessionId),
+		};
+	} catch (error) {
+		if (missingPathError(error)) {
+			return undefined;
+		}
+		throw new Error(
+			`failed to read .pi/.specsafe-state.json: ${error instanceof Error ? error.message : String(error)}`,
+		);
+	}
 }
 
 async function evaluateCase(
@@ -334,6 +435,12 @@ function renderReport(run: RunRecord): string {
 		`Failed: ${run.summary.failed}`,
 		`critical_regressions: ${run.summary.critical_regressions}`,
 		`Privacy: ${privacyStatus}`,
+		"",
+		"## Context",
+		`Spec-Slice: ${run.context?.spec_slice ?? "not linked"}`,
+		`Session: ${run.context?.session_id ?? "not linked"}`,
+		`Commit range: ${run.context?.commit_range ?? "not linked"}`,
+		`evalReportPath: ${run.context?.eval_report_path ?? join("evals", "reports", `${run.run_id}.md`)}`,
 		"",
 		"## Results",
 	];
