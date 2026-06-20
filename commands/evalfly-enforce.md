@@ -16,15 +16,22 @@ You are activating or inspecting explicit local EvalFly enforcement.
 
 ## WHAT TO DO
 
-1. Resolve the EvalFly CLI path:
+1. Parse `$ARGUMENTS` before running any shell command. Accept only these exact forms:
+   - `status`
+   - `stop`
+   - `explain`
+   - `start --suite smoke --commit-range <range>`
+2. For `start`, reject `<range>` unless it matches `^[A-Za-z0-9._/-]+\\.\\.[A-Za-z0-9._/-]+$`. Do not accept shell metacharacters, spaces, command substitutions, quotes, pipes, redirects, or extra tokens.
+3. Resolve the EvalFly CLI path:
    - Prefer the repo-local `skills/evalfly/bin/evalfly.ts` when it exists in the current project.
    - Otherwise use the installed `~/.omp/agent/skills/evalfly/bin/evalfly.ts`.
-2. Run exactly:
-   ```bash
-   bun run <evalfly.ts path> enforce $ARGUMENTS
-   ```
-3. Report the observed stdout/stderr and exit code.
-4. For `start` and `stop`, read `.pi/evalfly/enforcement.json` after the command and report the observed mode. Do not claim enforcement is active unless that file shows `"mode": "enforced"`.
+4. Run the command with explicit quoted argv. Never paste raw `$ARGUMENTS` into a shell command.
+   - `status`: `bun run "$evalfly_cli" enforce status`
+   - `stop`: `bun run "$evalfly_cli" enforce stop`
+   - `explain`: `bun run "$evalfly_cli" enforce explain`
+   - `start`: `bun run "$evalfly_cli" enforce start --suite smoke --commit-range "$commit_range"`
+5. Report the observed stdout/stderr and exit code.
+6. For `start` and `stop`, read `.pi/evalfly/enforcement.json` after the command and report the observed mode. Do not claim enforcement is active unless that file shows `"mode": "enforced"`.
 
 ## BOUNDARY
 

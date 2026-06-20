@@ -67,7 +67,15 @@ export function appendEvalFlyTraceEvent(
 	cwd: string,
 	event: Record<string, unknown>,
 ): void {
-	if (readEvalFlyEnforcementState(cwd).mode !== "enforced") return;
+	try {
+		if (readEvalFlyEnforcementState(cwd).mode !== "enforced") {
+			clearEvalFlyTraceBuffer(cwd);
+			return;
+		}
+	} catch {
+		clearEvalFlyTraceBuffer(cwd);
+		return;
+	}
 	const existing = buffers.get(cwd) ?? [];
 	const next = [...existing, sanitizeEvalFlyTraceEvent(event)].slice(
 		-MAX_BUFFER_EVENTS,

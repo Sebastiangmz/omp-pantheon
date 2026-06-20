@@ -123,7 +123,12 @@ describe("evalfly enforce command", () => {
 
 		expect(command).toContain("<command-instruction>");
 		expect(command).toContain("$ARGUMENTS");
-		expect(command).toContain("bun run <evalfly.ts path> enforce $ARGUMENTS");
+		expect(command).toContain(
+			'`start`: `bun run "$evalfly_cli" enforce start --suite smoke --commit-range "$commit_range"`',
+		);
+		expect(command).toContain(
+			"Never paste raw `$ARGUMENTS` into a shell command.",
+		);
 		expect(command).toContain(".pi/evalfly/enforcement.json");
 		expect(command).toContain(
 			'Do not claim enforcement is active unless that file shows `"mode": "enforced"`.',

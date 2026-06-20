@@ -87,23 +87,92 @@ export type EvalFlyGateResult =
 
 type LatestRunResult = EvalRun | "invalid" | undefined;
 
-function canonicalReportExists(cwd: string, run: EvalRun): boolean {
+function canonicalReportPath(run: EvalRun): string {
+	return join("evals", "reports", `${run.run_id}.md`);
+}
+
+function renderCanonicalReport(run: EvalRun): string {
+	const privacyStatus = run.results.every((result) => result.privacy.sanitized)
+		? "sanitized"
+		: "unsanitized";
+	const lines = [
+		`# EvalFly Report ${run.run_id}`,
+		"",
+		`Suite: ${run.suite}`,
+		`Verdict: ${run.verdict}`,
+		`Passed: ${run.summary.passed}`,
+		`Failed: ${run.summary.failed}`,
+		`critical_regressions: ${run.summary.critical_regressions}`,
+		`Privacy: ${privacyStatus}`,
+		"",
+		"## Context",
+		`Spec-Slice: ${run.context?.spec_slice ?? "not linked"}`,
+		`Session: ${run.context?.session_id ?? "not linked"}`,
+		`Commit range: ${run.context?.commit_range ?? "not linked"}`,
+		`evalReportPath: ${run.context?.eval_report_path ?? canonicalReportPath(run)}`,
+		"",
+		"## Results",
+	];
+	for (const result of run.results) {
+		lines.push(
+			`- ${result.passed ? "PASS" : "FAIL"} ${result.case_id} (${result.risk_tier})${result.errors.length > 0 ? ` — ${result.errors.join("; ")}` : ""}`,
+		);
+	}
+	return `${lines.join("\n")}\n`;
+}
+
+function readCanonicalReport(cwd: string, run: EvalRun): string | undefined {
 	const reportPath = run.context?.eval_report_path;
-	const expected = join("evals", "reports", `${run.run_id}.md`);
-	if (reportPath !== expected) return false;
-	if (isAbsolute(reportPath)) return false;
+	const expected = canonicalReportPath(run);
+	if (reportPath !== expected) return undefined;
+	if (isAbsolute(reportPath)) return undefined;
 	try {
-		exactArtifactFilePath(
+		const exactReportPath = exactArtifactFilePath(
 			cwd,
 			["evals", "reports"],
 			run.run_id,
 			".md",
 			"report",
 		);
-		return true;
+		return readFileSync(exactReportPath, "utf8");
 	} catch {
-		return false;
+		return undefined;
 	}
+}
+
+function isFreshRun(run: EvalRun, activatedAt: string | undefined): boolean {
+	if (!activatedAt) return false;
+	const runCreatedAt = Date.parse(run.created_at);
+	const stateActivatedAt = Date.parse(activatedAt);
+	return (
+		Number.isFinite(runCreatedAt) &&
+		Number.isFinite(stateActivatedAt) &&
+		runCreatedAt >= stateActivatedAt
+	);
+}
+
+function hasConsistentRunResults(run: EvalRun): boolean {
+	if (run.results.length === 0) return false;
+	let passed = 0;
+	let failed = 0;
+	let criticalRegressions = 0;
+	for (const result of run.results) {
+		if (result.critical !== (result.risk_tier === "critical")) return false;
+		if (result.passed) {
+			passed += 1;
+			continue;
+		}
+		failed += 1;
+		if (result.critical) criticalRegressions += 1;
+	}
+	return (
+		run.summary.total === run.results.length &&
+		run.summary.passed === passed &&
+		run.summary.failed === failed &&
+		run.summary.critical_regressions === criticalRegressions &&
+		run.verdict ===
+			(failed === 0 && criticalRegressions === 0 ? "pass" : "fail")
+	);
 }
 
 function readLatestRun(
@@ -173,22 +242,45 @@ export function evaluateEvalFlyCompletionGate(cwd: string): EvalFlyGateResult {
 				"EvalFly enforcement is active but saved run evidence is invalid.",
 		};
 	}
-	if (!latest || !canonicalReportExists(cwd, latest)) {
+	if (!latest) {
 		return { allowed: false, reason: NO_LATEST_REPORT_REASON };
+	}
+	const report = readCanonicalReport(cwd, latest);
+	if (!report) {
+		return { allowed: false, reason: NO_LATEST_REPORT_REASON };
+	}
+
+	if (!isFreshRun(latest, state.activatedAt)) {
+		return {
+			allowed: false,
+			reason:
+				"EvalFly enforcement is active but the latest matching run predates enforcement activation.",
+		};
+	}
+
+	if (
+		!hasConsistentRunResults(latest) ||
+		report !== renderCanonicalReport(latest)
+	) {
+		return {
+			allowed: false,
+			reason:
+				"EvalFly enforcement is active but saved run evidence is inconsistent.",
+		};
+	}
+
+	if (latest.summary.critical_regressions !== 0) {
+		return {
+			allowed: false,
+			reason:
+				"EvalFly enforcement is active but critical regressions are present.",
+		};
 	}
 
 	if (latest.verdict !== "pass") {
 		return {
 			allowed: false,
 			reason: "EvalFly enforcement is active but the latest run did not pass.",
-		};
-	}
-
-	if (latest.summary?.critical_regressions !== 0) {
-		return {
-			allowed: false,
-			reason:
-				"EvalFly enforcement is active but critical regressions are present.",
 		};
 	}
 

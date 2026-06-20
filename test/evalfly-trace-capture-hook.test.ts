@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -196,5 +196,37 @@ describe("EvalFly trace capture", () => {
 			handlers.session_switch?.[0]?.({}, { cwd });
 			expect(readEvalFlyTraceBuffer(cwd)).toEqual([]);
 			clearEvalFlyTraceBuffer(cwd);
+		}));
+
+	test("hook skips capture and clears buffer when state is malformed or advisory", () =>
+		withProject((cwd) => {
+			writeEvalFlyEnforcementState(cwd, {
+				mode: "enforced",
+				suite: "smoke",
+				commitRange: "main..HEAD",
+			});
+			appendEvalFlyTraceEvent(cwd, {
+				type: "tool_result",
+				sanitized_input: "safe input",
+			});
+			expect(readEvalFlyTraceBuffer(cwd)).toHaveLength(1);
+
+			mkdirSync(join(cwd, ".pi", "evalfly"), { recursive: true });
+			writeFileSync(join(cwd, ".pi", "evalfly", "enforcement.json"), "{ nope");
+
+			expect(() =>
+				appendEvalFlyTraceEvent(cwd, {
+					type: "tool_result",
+					sanitized_input: "safe input 2",
+				}),
+			).not.toThrow();
+			expect(readEvalFlyTraceBuffer(cwd)).toEqual([]);
+
+			writeEvalFlyEnforcementState(cwd, { mode: "advisory" });
+			appendEvalFlyTraceEvent(cwd, {
+				type: "tool_result",
+				sanitized_input: "safe input 3",
+			});
+			expect(readEvalFlyTraceBuffer(cwd)).toEqual([]);
 		}));
 });

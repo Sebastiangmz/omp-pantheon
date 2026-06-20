@@ -42,8 +42,8 @@ oh-my-openagent-inspired Pantheon layer, then folds in the local Seshat stack so
 ## Commands in the bundle
 
 `/ulw`, `/ultrawork`, `/init-deep`, `/refactor`, `/handoff`, `/start-work`,
-`/remove-ai-slops`, `/omomomo`, plus extension commands `/ralph-loop`,
-`/ulw-loop`, `/cancel-ralph`, and `/stop-continuation`.
+`/remove-ai-slops`, `/evalfly-enforce`, `/omomomo`, plus extension commands
+`/ralph-loop`, `/ulw-loop`, `/cancel-ralph`, and `/stop-continuation`.
 
 ## Who made this lineage?
 

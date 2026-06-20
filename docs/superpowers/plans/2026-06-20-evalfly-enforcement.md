@@ -66,7 +66,7 @@ Do not mutate global `~/.omp` state during implementation tests. Use temporary p
 - Create: `skills/evalfly/bin/enforcement-state.ts`
 - Test: `test/evalfly-enforcement-state.test.ts`
 
-- [ ] **Step 1: Write failing tests for explicit inactive default**
+- [x] **Step 1: Write failing tests for explicit inactive default**
 
 ```ts
 import { describe, expect, test } from "bun:test";
@@ -90,13 +90,13 @@ describe("EvalFly enforcement state", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test test/evalfly-enforcement-state.test.ts`
 
 Expected: FAIL because `enforcement-state` module does not exist.
 
-- [ ] **Step 3: Implement minimal state reader/writer**
+- [x] **Step 3: Implement minimal state reader/writer**
 
 Create `skills/evalfly/bin/enforcement-state.ts`:
 
@@ -145,7 +145,7 @@ export function writeEvalFlyEnforcementState(
 }
 ```
 
-- [ ] **Step 4: Add tests for start/stop state**
+- [x] **Step 4: Add tests for start/stop state**
 
 Extend the test:
 
@@ -183,13 +183,13 @@ test("advisory state disables enforcement", () => {
 });
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `bun test test/evalfly-enforcement-state.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add skills/evalfly/bin/enforcement-state.ts test/evalfly-enforcement-state.test.ts
@@ -205,7 +205,7 @@ git commit -m "Add EvalFly enforcement state"
 - Modify: `skills/evalfly/bin/evalfly.ts`
 - Test: `test/evalfly-enforce-command.test.ts`
 
-- [ ] **Step 1: Write failing tests for CLI subcommands**
+- [x] **Step 1: Write failing tests for CLI subcommands**
 
 Create `test/evalfly-enforce-command.test.ts`:
 
@@ -251,13 +251,13 @@ describe("evalfly enforce command", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test test/evalfly-enforce-command.test.ts`
 
 Expected: FAIL because `enforce` is unknown.
 
-- [ ] **Step 3: Add `enforce` dispatch and state calls**
+- [x] **Step 3: Add `enforce` dispatch and state calls**
 
 Modify `skills/evalfly/bin/evalfly.ts`:
 
@@ -311,7 +311,7 @@ async function enforceCommand(
 }
 ```
 
-- [ ] **Step 4: Write slash command documentation**
+- [x] **Step 4: Write slash command documentation**
 
 Create `commands/evalfly-enforce.md`:
 
@@ -334,13 +334,13 @@ Modes:
 Enforced mode is opt-in. It is not the default OMP behavior.
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `bun test test/evalfly-enforce-command.test.ts test/evalfly-enforcement-state.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add commands/evalfly-enforce.md skills/evalfly/bin/evalfly.ts test/evalfly-enforce-command.test.ts
@@ -356,7 +356,7 @@ git commit -m "Add EvalFly enforcement command"
 - Modify: `extensions/oh-my-omp/index.ts`
 - Test: `test/evalfly-enforcement-gate.test.ts`
 
-- [ ] **Step 1: Write failing gate tests**
+- [x] **Step 1: Write failing gate tests**
 
 Create `test/evalfly-enforcement-gate.test.ts`:
 
@@ -393,13 +393,13 @@ describe("EvalFly completion gate", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test test/evalfly-enforcement-gate.test.ts`
 
 Expected: FAIL because `enforcement-gate` module does not exist.
 
-- [ ] **Step 3: Implement gate over latest run JSON**
+- [x] **Step 3: Implement gate over latest run JSON**
 
 Create `extensions/oh-my-omp/evalfly/enforcement-gate.ts`:
 
@@ -448,7 +448,7 @@ export function evaluateEvalFlyCompletionGate(cwd: string): EvalFlyGateResult {
 }
 ```
 
-- [ ] **Step 4: Add passing-report test**
+- [x] **Step 4: Add passing-report test**
 
 Extend gate test:
 
@@ -470,17 +470,17 @@ test("allows enforced mode with passing latest run", () => {
 });
 ```
 
-- [ ] **Step 5: Register hook only after API is stable**
+- [x] **Step 5: Register hook only after API is stable**
 
 Modify `extensions/oh-my-omp/index.ts` to register a completion/stop hook that calls `evaluateEvalFlyCompletionGate(ctx.cwd)` and returns a blocking system message only when `{ allowed: false }`.
 
-- [ ] **Step 6: Run tests**
+- [x] **Step 6: Run tests**
 
 Run: `bun test test/evalfly-enforcement-gate.test.ts test/evalfly-advisor-hook.test.ts`
 
 Expected: PASS and advisor remains non-blocking when no enforcement state exists.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add extensions/oh-my-omp/evalfly/enforcement-gate.ts extensions/oh-my-omp/index.ts test/evalfly-enforcement-gate.test.ts
@@ -496,7 +496,7 @@ git commit -m "Add EvalFly completion gate"
 - Modify: `extensions/oh-my-omp/index.ts`
 - Test: `test/evalfly-trace-capture-hook.test.ts`
 
-- [ ] **Step 1: Write failing tests for opt-in trace capture**
+- [x] **Step 1: Write failing tests for opt-in trace capture**
 
 Create `test/evalfly-trace-capture-hook.test.ts`:
 
@@ -539,13 +539,13 @@ describe("EvalFly trace buffer", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test test/evalfly-trace-capture-hook.test.ts`
 
 Expected: FAIL because `trace-buffer` module does not exist.
 
-- [ ] **Step 3: Implement sanitized buffer**
+- [x] **Step 3: Implement sanitized buffer**
 
 Create `extensions/oh-my-omp/evalfly/trace-buffer.ts`:
 
@@ -576,17 +576,17 @@ export function clearEvalFlyTraceBuffer(cwd: string): void {
 }
 ```
 
-- [ ] **Step 4: Register lifecycle/tool hooks conservatively**
+- [x] **Step 4: Register lifecycle/tool hooks conservatively**
 
 Modify `extensions/oh-my-omp/index.ts` only after tests pass. Register capture points that store metadata and sanitized fields only. Do not store raw prompt, raw tool output, or file contents.
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `bun test test/evalfly-trace-capture-hook.test.ts test/evalfly-advisor-hook.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add extensions/oh-my-omp/evalfly/trace-buffer.ts extensions/oh-my-omp/index.ts test/evalfly-trace-capture-hook.test.ts
@@ -601,7 +601,7 @@ git commit -m "Add opt-in EvalFly trace buffer"
 - Create: `docs/evalfly/ci-enforcement.md`
 - Create: `skills/evalfly/templates/github-actions/evalfly-install-required-gate.md`
 
-- [ ] **Step 1: Document GitHub cost and availability boundaries**
+- [x] **Step 1: Document GitHub cost and availability boundaries**
 
 Create `docs/evalfly/ci-enforcement.md` with these facts:
 
@@ -624,7 +624,7 @@ Branch protection boundary:
 - Private repositories need GitHub Pro, Team, or Enterprise for protected branches/rulesets.
 ```
 
-- [ ] **Step 2: Document automation design**
+- [x] **Step 2: Document automation design**
 
 Append:
 
@@ -637,7 +637,7 @@ Automation should be explicit and approval-gated:
 4. Never configure branch protection without an explicit `--i-approve` style confirmation.
 ```
 
-- [ ] **Step 3: Commit docs**
+- [x] **Step 3: Commit docs**
 
 ```bash
 git add docs/evalfly/ci-enforcement.md skills/evalfly/templates/github-actions/evalfly-install-required-gate.md
@@ -651,7 +651,7 @@ git commit -m "Document EvalFly CI enforcement"
 **Files:**
 - All changed files from prior tasks.
 
-- [ ] **Step 1: Run targeted EvalFly tests**
+- [x] **Step 1: Run targeted EvalFly tests**
 
 Run:
 
@@ -667,7 +667,7 @@ bun test \
 
 Expected: PASS.
 
-- [ ] **Step 2: Run full repo verification**
+- [x] **Step 2: Run full repo verification**
 
 Run:
 
@@ -679,7 +679,7 @@ bun run format:check
 
 Expected: PASS.
 
-- [ ] **Step 3: Manual smoke in a temp project**
+- [x] **Step 3: Manual smoke in a temp project**
 
 Run:
 
@@ -704,7 +704,7 @@ evalfly check ... pass
 EvalFly enforcement: enforced
 ```
 
-- [ ] **Step 4: Verify default OMP behavior remains advisory**
+- [x] **Step 4: Verify default OMP behavior remains advisory**
 
 Run:
 
@@ -714,7 +714,7 @@ OMP_TEST_NO_COLOR=1 omp -p --no-session --max-time=30 "/omomomo"
 
 Expected: output still describes EvalFly as opt-in/advisory unless explicitly enabled.
 
-- [ ] **Step 5: Commit final docs if needed**
+- [x] **Step 5: Commit final docs if needed**
 
 ```bash
 git add docs/evalfly commands/evalfly-enforce.md skills/evalfly/README.md skills/evaluation-flywheel/SKILL.md
