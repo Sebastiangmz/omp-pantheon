@@ -903,6 +903,66 @@ describe("evalfly CLI", () => {
 		).rejects.toThrow();
 	});
 
+	test("curate-trace refuses a symlinked raw trace root", async () => {
+		const cwd = await makeProject();
+		const outsideDir = await mkdtemp(join(tmpdir(), "evalfly-raw-root-"));
+		await writeFile(join(outsideDir, "trace.json"), '{"safe":true}\n');
+		await mkdir(join(cwd, ".pi", "evalfly"), { recursive: true });
+		await symlink(outsideDir, join(cwd, ".pi", "evalfly", "raw"), "dir");
+
+		const result = await dispatch(
+			["curate-trace", "trace.json", "root-link.json"],
+			{ cwd },
+		);
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("unsafe raw trace directory");
+		await expect(
+			readFile(join(cwd, "evals", "traces", "sanitized", "root-link.json")),
+		).rejects.toThrow();
+	});
+
+	test("curate-trace refuses a symlinked traces directory without creating outside sanitized", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });
+		await writeFile(join(cwd, ".pi", "evalfly", "raw", "trace.json"), "{}\n");
+		const outsideDir = await mkdtemp(join(tmpdir(), "evalfly-traces-outside-"));
+		await symlink(outsideDir, join(cwd, "evals", "traces"), "dir");
+
+		const result = await dispatch(
+			["curate-trace", "trace.json", "trace.json"],
+			{ cwd },
+		);
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("artifact directory must be evals/traces");
+		await expect(access(join(outsideDir, "sanitized"))).rejects.toThrow();
+	});
+
+	test("curate-trace refuses to overwrite an existing sanitized trace", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });
+		await mkdir(join(cwd, "evals", "traces", "sanitized"), { recursive: true });
+		await writeFile(join(cwd, ".pi", "evalfly", "raw", "trace.json"), "{}\n");
+		await writeFile(
+			join(cwd, "evals", "traces", "sanitized", "trace.json"),
+			"sentinel\n",
+		);
+
+		const result = await dispatch(
+			["curate-trace", "trace.json", "trace.json"],
+			{ cwd },
+		);
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("sanitized trace already exists");
+		expect(
+			await readFile(
+				join(cwd, "evals", "traces", "sanitized", "trace.json"),
+				"utf8",
+			),
+		).toBe("sentinel\n");
+	});
 	test("curate-trace refuses unsafe sanitized trace names", async () => {
 		const cwd = await makeProject();
 		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });

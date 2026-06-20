@@ -552,7 +552,14 @@ async function boundedPath(
 	relativePath: string,
 ): Promise<string> {
 	const basePath = join(cwd, ...baseParts);
+	const realCwd = await realpath(cwd);
+	const expectedBasePath = resolve(realCwd, ...baseParts);
 	const realBasePath = await realpath(basePath);
+	if (realBasePath !== expectedBasePath) {
+		throw new Error(
+			`unsafe raw trace directory: ${join(...baseParts)} (raw trace directory must be ${join(...baseParts)})`,
+		);
+	}
 	const targetPath = resolve(realBasePath, relativePath);
 	const relativeTarget = relative(realBasePath, targetPath);
 	if (
@@ -577,41 +584,58 @@ async function boundedPath(
 }
 
 async function ensureSanitizedTraceDir(cwd: string): Promise<string> {
-	const artifactDirParts = ["evals", "traces", "sanitized"] as const;
-	const artifactDir = join(cwd, ...artifactDirParts);
 	await assertProjectEvalsDir(cwd);
+	const tracesDir = await ensureExactArtifactDir(cwd, ["evals", "traces"]);
+	const sanitizedDir = join(tracesDir, "sanitized");
+	try {
+		const realSanitizedDir = await realpath(sanitizedDir);
+		await assertExactArtifactDir(
+			cwd,
+			["evals", "traces", "sanitized"],
+			realSanitizedDir,
+		);
+		return realSanitizedDir;
+	} catch (error) {
+		if (!missingPathError(error)) {
+			throw error;
+		}
+	}
+	await mkdir(sanitizedDir);
+	const realSanitizedDir = await realpath(sanitizedDir);
+	await assertExactArtifactDir(
+		cwd,
+		["evals", "traces", "sanitized"],
+		realSanitizedDir,
+	);
+	return realSanitizedDir;
+}
+
+async function ensureExactArtifactDir(
+	cwd: string,
+	artifactDirParts: readonly string[],
+): Promise<string> {
+	const artifactDir = join(cwd, ...artifactDirParts);
 	try {
 		const realArtifactDir = await realpath(artifactDir);
-		await assertTraceArtifactDir(cwd, artifactDirParts, realArtifactDir);
+		await assertExactArtifactDir(cwd, artifactDirParts, realArtifactDir);
 		return realArtifactDir;
 	} catch (error) {
 		if (!missingPathError(error)) {
 			throw error;
 		}
 	}
-	await mkdir(artifactDir, { recursive: true });
+	await mkdir(artifactDir);
 	const realArtifactDir = await realpath(artifactDir);
-	await assertTraceArtifactDir(cwd, artifactDirParts, realArtifactDir);
+	await assertExactArtifactDir(cwd, artifactDirParts, realArtifactDir);
 	return realArtifactDir;
 }
 
-async function assertTraceArtifactDir(
+async function assertExactArtifactDir(
 	cwd: string,
-	artifactDirParts: readonly ["evals", "traces", "sanitized"],
+	artifactDirParts: readonly string[],
 	realArtifactDir: string,
 ): Promise<void> {
 	const realCwd = await realpath(cwd);
-	const realArtifactDirRelativePath = relative(realCwd, realArtifactDir);
-	if (
-		realArtifactDirRelativePath === "" ||
-		realArtifactDirRelativePath === ".." ||
-		realArtifactDirRelativePath.startsWith(`..${sep}`) ||
-		isAbsolute(realArtifactDirRelativePath)
-	) {
-		throw new Error(
-			`unsafe artifact directory: ${join(...artifactDirParts)} (artifact directory must stay within cwd)`,
-		);
-	}
 	const expectedArtifactDir = resolve(realCwd, ...artifactDirParts);
 	if (realArtifactDir !== expectedArtifactDir) {
 		throw new Error(
