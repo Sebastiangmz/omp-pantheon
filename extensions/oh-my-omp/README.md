@@ -37,8 +37,8 @@ the Seshat/SpecSafe runtime into the local harness.
   `evaluation-flywheel`, `github`, `latest-docs`, `linear`, `push`, `specsafe`.
 - EvalFly: opt-in templates and CLI under `skills/evalfly/` for deterministic
   validation/run/report/trace-curation evidence; the bundled `evalfly-advisor`
-  hook is inactive unless a project creates `.pi/evalfly/hints-enabled`, and it
-  only adds non-blocking reminder context.
+  hook is inactive unless a project has both `.pi/evalfly/hints-enabled` and
+  `evals/config.json`, and it only adds non-blocking reminder context.
 
 ### Hooks
 - Extension hooks: `todo-enforcer`, opt-in `evalfly-advisor`, `comment-checker`,
