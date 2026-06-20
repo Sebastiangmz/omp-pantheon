@@ -1,0 +1,21 @@
+{
+	"schema_version": "evalfly.case.v1",
+	"case_id": "evalfly-cli-exists",
+	"title": "EvalFly CLI exists",
+	"suite": "smoke",
+	"risk_tier": "critical",
+	"task_type": "cli_contract",
+	"source": { "kind": "project_eval_repo" },
+	"privacy": { "classification": "public", "sanitized": true },
+	"expected": {
+		"success_criteria": [
+			"The EvalFly CLI entrypoint exists at skills/evalfly/bin/evalfly.ts."
+		]
+	},
+	"judge": {
+		"type": "deterministic",
+		"assertions": [
+			{ "type": "file_exists", "path": "skills/evalfly/bin/evalfly.ts" }
+		]
+	}
+}

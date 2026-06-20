@@ -1,0 +1,21 @@
+{
+	"schema_version": "evalfly.case.v1",
+	"case_id": "evalfly-enforce-command-exists",
+	"title": "EvalFly enforcement slash command exists",
+	"suite": "smoke",
+	"risk_tier": "critical",
+	"task_type": "command_contract",
+	"source": { "kind": "project_eval_repo" },
+	"privacy": { "classification": "public", "sanitized": true },
+	"expected": {
+		"success_criteria": [
+			"The /evalfly-enforce command contract exists in commands/evalfly-enforce.md."
+		]
+	},
+	"judge": {
+		"type": "deterministic",
+		"assertions": [
+			{ "type": "file_exists", "path": "commands/evalfly-enforce.md" }
+		]
+	}
+}
