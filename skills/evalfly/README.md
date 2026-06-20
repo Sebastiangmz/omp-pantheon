@@ -38,6 +38,8 @@ For a project that wants EvalFly evidence:
 4. Run `validate`, then `check --suite smoke --commit-range <base>..<head>` before citing EvalFly evidence in a PR or handoff.
 5. Cite `summary`, `latest`, `list`, or `compare` output with the markdown report path. Use `compare <baseline-run-id> <after-run-id>` when a review needs baseline-to-after regression evidence. Do not claim EvalFly blocks merges unless the project explicitly copies the required-gate workflow or otherwise wires `check` into its own protected workflow.
 
+`omp-pantheon` itself dogfoods this structure with a committed root `evals/` tree. Its smoke suite protects critical EvalFly harness files with deterministic `file_exists` checks and is the reference project eval repo for future adopters.
+
 ## Commands
 
 Run commands from the project root that contains `evals/config.json`. After installing `omp-pantheon`, use the installed skill path from any project:
