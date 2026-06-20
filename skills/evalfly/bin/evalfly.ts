@@ -222,7 +222,13 @@ async function latestCommand(cwd: string): Promise<DispatchResult> {
 	for (const file of files) {
 		const runId = file.slice(0, -".json".length);
 		assertSafeRunId(runId);
-		const runPath = await artifactPath(cwd, ["evals", "runs"], runId, ".json");
+		const runPath = await exactArtifactFilePath(
+			cwd,
+			["evals", "runs"],
+			runId,
+			".json",
+			"run",
+		);
 		const parsed = JSON.parse(await readFile(runPath, "utf8"));
 		const result = validateEvalRun(parsed);
 		if (!result.ok) {
@@ -257,11 +263,12 @@ async function canonicalReportPath(
 ): Promise<string> {
 	const relativeReportPath = join("evals", "reports", `${runId}.md`);
 	try {
-		const reportPath = await artifactPath(
+		const reportPath = await exactArtifactFilePath(
 			cwd,
 			["evals", "reports"],
 			runId,
 			".md",
+			"report",
 		);
 		await access(reportPath);
 		return relativeReportPath;
@@ -834,6 +841,31 @@ async function artifactPath(
 		isAbsolute(relativePath)
 	) {
 		throw new Error(`unsafe run id: ${runId}`);
+	}
+	return targetPath;
+}
+
+async function exactArtifactFilePath(
+	cwd: string,
+	artifactDirParts: [string, string],
+	runId: string,
+	extension: ".json" | ".md",
+	label: "run" | "report",
+): Promise<string> {
+	const targetPath = await artifactPath(
+		cwd,
+		artifactDirParts,
+		runId,
+		extension,
+	);
+	const relativeTargetPath = join(...artifactDirParts, `${runId}${extension}`);
+	const stat = await lstat(targetPath);
+	if (!stat.isFile() || stat.isSymbolicLink()) {
+		throw new Error(`unsafe ${label} artifact: ${relativeTargetPath}`);
+	}
+	const realTargetPath = await realpath(targetPath);
+	if (realTargetPath !== targetPath) {
+		throw new Error(`unsafe ${label} artifact: ${relativeTargetPath}`);
 	}
 	return targetPath;
 }

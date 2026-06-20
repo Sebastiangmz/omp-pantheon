@@ -4,6 +4,7 @@ import {
 	mkdtemp,
 	mkdir,
 	readFile,
+	rm,
 	symlink,
 	writeFile,
 } from "node:fs/promises";
@@ -715,6 +716,69 @@ describe("evalfly CLI", () => {
 		expect(result.exitCode).toBe(1);
 		expect(result.stderr).toContain(
 			"missing report: evals/reports/missing-report.md",
+		);
+	});
+
+	test("latest refuses symlinked run artifact files", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, "evals", "runs"), { recursive: true });
+		const outsideDir = await mkdtemp(
+			join(tmpdir(), "evalfly-run-file-outside-"),
+		);
+		await writeFile(
+			join(outsideDir, "run-link.json"),
+			JSON.stringify({
+				schema_version: "evalfly.run.v1",
+				run_id: "run-link",
+				suite: "smoke",
+				config_name: "Smoke suite",
+				created_at: "2026-06-20T12:00:00.000Z",
+				results: [],
+				summary: {
+					total: 0,
+					passed: 0,
+					failed: 0,
+					critical_regressions: 0,
+				},
+				verdict: "pass",
+			}),
+		);
+		await symlink(
+			join(outsideDir, "run-link.json"),
+			join(cwd, "evals", "runs", "run-link.json"),
+		);
+
+		const result = await dispatch(["latest"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain(
+			"unsafe run artifact: evals/runs/run-link.json",
+		);
+	});
+
+	test("latest refuses symlinked report artifact files", async () => {
+		const cwd = await makeProject();
+		await writeFile(join(cwd, "expected.txt"), "ok");
+		await dispatch(["run", "--suite", "smoke"], {
+			cwd,
+			now: () => new Date("2026-06-20T12:00:00.000Z"),
+			runId: "run-report-link",
+		});
+		const outsideDir = await mkdtemp(
+			join(tmpdir(), "evalfly-report-file-outside-"),
+		);
+		await writeFile(join(outsideDir, "report.md"), "private report\n");
+		await rm(join(cwd, "evals", "reports", "run-report-link.md"));
+		await symlink(
+			join(outsideDir, "report.md"),
+			join(cwd, "evals", "reports", "run-report-link.md"),
+		);
+
+		const result = await dispatch(["latest"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain(
+			"unsafe report artifact: evals/reports/run-report-link.md",
 		);
 	});
 
