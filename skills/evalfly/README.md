@@ -51,6 +51,7 @@ bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts traces
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts compare <baseline-run-id> <after-run-id>
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts report <run-id>
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitized-name>
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts normalize-trace <raw-relative-path> <sanitized-name>
 ```
 
 When developing this bundle itself, the repo-local path also works:
@@ -66,6 +67,7 @@ bun run skills/evalfly/bin/evalfly.ts summary
 bun run skills/evalfly/bin/evalfly.ts traces
 bun run skills/evalfly/bin/evalfly.ts compare <baseline-run-id> <after-run-id>
 bun run skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitized-name>
+bun run skills/evalfly/bin/evalfly.ts normalize-trace <raw-relative-path> <sanitized-name>
 ```
 
 - `validate` checks `evals/config.json` against the current schema.
@@ -79,6 +81,7 @@ bun run skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitize
 - `compare <baseline-run-id> <after-run-id>` validates saved run records and prints baseline-to-after deltas for total, passed, failed, and critical regressions. It exits nonzero if the after run has any critical regression or worsens failed/critical counts versus baseline.
 - `report <run-id>` regenerates the markdown report from a saved run JSON.
 - `curate-trace <raw-relative-path> <sanitized-name>` copies a local trace from ignored `.pi/evalfly/raw/` into `evals/traces/sanitized/` only after deterministic checks for path safety and obvious unsanitized content. It does not capture traces and does not redact automatically.
+- `normalize-trace <raw-relative-path> <sanitized-name>` reads local JSONL from ignored `.pi/evalfly/raw/`, writes a normalized JSON trace under `evals/traces/sanitized/`, and whitelists only trace metadata plus `sanitized_input` / `sanitized_output`. It drops raw `input`, `output`, and `content` fields instead of redacting them.
 
 ## Experimental judge metadata
 
