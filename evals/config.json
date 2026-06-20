@@ -1,0 +1,227 @@
+{
+	"schema_version": "evalfly.config.v1",
+	"name": "omp-pantheon EvalFly smoke suite",
+	"cases": [
+		{
+			"schema_version": "evalfly.case.v1",
+			"case_id": "root-readme-exists",
+			"title": "Root README exists",
+			"suite": "smoke",
+			"risk_tier": "critical",
+			"task_type": "repository_smoke",
+			"source": { "kind": "project_eval_repo" },
+			"privacy": { "classification": "public", "sanitized": true },
+			"expected": {
+				"success_criteria": ["The project root README.md exists."]
+			},
+			"judge": {
+				"type": "deterministic",
+				"assertions": [{ "type": "file_exists", "path": "README.md" }]
+			}
+		},
+		{
+			"schema_version": "evalfly.case.v1",
+			"case_id": "evalfly-enforce-command-exists",
+			"title": "EvalFly enforcement slash command exists",
+			"suite": "smoke",
+			"risk_tier": "critical",
+			"task_type": "command_contract",
+			"source": { "kind": "project_eval_repo" },
+			"privacy": { "classification": "public", "sanitized": true },
+			"expected": {
+				"success_criteria": [
+					"The /evalfly-enforce command contract exists in commands/evalfly-enforce.md."
+				]
+			},
+			"judge": {
+				"type": "deterministic",
+				"assertions": [
+					{ "type": "file_exists", "path": "commands/evalfly-enforce.md" }
+				]
+			}
+		},
+		{
+			"schema_version": "evalfly.case.v1",
+			"case_id": "evalfly-cli-exists",
+			"title": "EvalFly CLI exists",
+			"suite": "smoke",
+			"risk_tier": "critical",
+			"task_type": "cli_contract",
+			"source": { "kind": "project_eval_repo" },
+			"privacy": { "classification": "public", "sanitized": true },
+			"expected": {
+				"success_criteria": [
+					"The EvalFly CLI entrypoint exists at skills/evalfly/bin/evalfly.ts."
+				]
+			},
+			"judge": {
+				"type": "deterministic",
+				"assertions": [
+					{ "type": "file_exists", "path": "skills/evalfly/bin/evalfly.ts" }
+				]
+			}
+		},
+		{
+			"schema_version": "evalfly.case.v1",
+			"case_id": "evalfly-enforcement-state-exists",
+			"title": "EvalFly enforcement state module exists",
+			"suite": "smoke",
+			"risk_tier": "critical",
+			"task_type": "local_enforcement_contract",
+			"source": { "kind": "project_eval_repo" },
+			"privacy": { "classification": "public", "sanitized": true },
+			"expected": {
+				"success_criteria": [
+					"The local enforcement state module exists at skills/evalfly/bin/enforcement-state.ts."
+				]
+			},
+			"judge": {
+				"type": "deterministic",
+				"assertions": [
+					{
+						"type": "file_exists",
+						"path": "skills/evalfly/bin/enforcement-state.ts"
+					}
+				]
+			}
+		},
+		{
+			"schema_version": "evalfly.case.v1",
+			"case_id": "evalfly-completion-gate-exists",
+			"title": "EvalFly completion gate exists",
+			"suite": "smoke",
+			"risk_tier": "critical",
+			"task_type": "local_enforcement_contract",
+			"source": { "kind": "project_eval_repo" },
+			"privacy": { "classification": "public", "sanitized": true },
+			"expected": {
+				"success_criteria": [
+					"The local completion gate exists at extensions/oh-my-omp/evalfly/enforcement-gate.ts."
+				]
+			},
+			"judge": {
+				"type": "deterministic",
+				"assertions": [
+					{
+						"type": "file_exists",
+						"path": "extensions/oh-my-omp/evalfly/enforcement-gate.ts"
+					}
+				]
+			}
+		},
+		{
+			"schema_version": "evalfly.case.v1",
+			"case_id": "evalfly-trace-buffer-exists",
+			"title": "EvalFly trace buffer exists",
+			"suite": "smoke",
+			"risk_tier": "critical",
+			"task_type": "trace_contract",
+			"source": { "kind": "project_eval_repo" },
+			"privacy": { "classification": "public", "sanitized": true },
+			"expected": {
+				"success_criteria": [
+					"The enforcement-only trace buffer exists at extensions/oh-my-omp/evalfly/trace-buffer.ts."
+				]
+			},
+			"judge": {
+				"type": "deterministic",
+				"assertions": [
+					{
+						"type": "file_exists",
+						"path": "extensions/oh-my-omp/evalfly/trace-buffer.ts"
+					}
+				]
+			}
+		},
+		{
+			"schema_version": "evalfly.case.v1",
+			"case_id": "verify-workflow-exists",
+			"title": "Verify workflow exists",
+			"suite": "smoke",
+			"risk_tier": "critical",
+			"task_type": "ci_contract",
+			"source": { "kind": "project_eval_repo" },
+			"privacy": { "classification": "public", "sanitized": true },
+			"expected": {
+				"success_criteria": [
+					"The base GitHub Actions verify workflow exists at .github/workflows/verify.yml."
+				]
+			},
+			"judge": {
+				"type": "deterministic",
+				"assertions": [
+					{ "type": "file_exists", "path": ".github/workflows/verify.yml" }
+				]
+			}
+		},
+		{
+			"schema_version": "evalfly.case.v1",
+			"case_id": "evalfly-modes-doc-exists",
+			"title": "EvalFly modes documentation exists",
+			"suite": "smoke",
+			"risk_tier": "critical",
+			"task_type": "documentation_contract",
+			"source": { "kind": "project_eval_repo" },
+			"privacy": { "classification": "public", "sanitized": true },
+			"expected": {
+				"success_criteria": [
+					"The EvalFly modes documentation exists at docs/evalfly/modes.md."
+				]
+			},
+			"judge": {
+				"type": "deterministic",
+				"assertions": [
+					{ "type": "file_exists", "path": "docs/evalfly/modes.md" }
+				]
+			}
+		},
+		{
+			"schema_version": "evalfly.case.v1",
+			"case_id": "evaluation-flywheel-skill-exists",
+			"title": "Evaluation Flywheel skill exists",
+			"suite": "smoke",
+			"risk_tier": "critical",
+			"task_type": "methodology_contract",
+			"source": { "kind": "project_eval_repo" },
+			"privacy": { "classification": "public", "sanitized": true },
+			"expected": {
+				"success_criteria": [
+					"The Evaluation Flywheel methodology skill exists at skills/evaluation-flywheel/SKILL.md."
+				]
+			},
+			"judge": {
+				"type": "deterministic",
+				"assertions": [
+					{
+						"type": "file_exists",
+						"path": "skills/evaluation-flywheel/SKILL.md"
+					}
+				]
+			}
+		},
+		{
+			"schema_version": "evalfly.case.v1",
+			"case_id": "evalfly-gate-test-exists",
+			"title": "EvalFly gate regression test exists",
+			"suite": "smoke",
+			"risk_tier": "critical",
+			"task_type": "test_contract",
+			"source": { "kind": "project_eval_repo" },
+			"privacy": { "classification": "public", "sanitized": true },
+			"expected": {
+				"success_criteria": [
+					"The EvalFly enforcement gate regression test exists at test/evalfly-enforcement-gate.test.ts."
+				]
+			},
+			"judge": {
+				"type": "deterministic",
+				"assertions": [
+					{
+						"type": "file_exists",
+						"path": "test/evalfly-enforcement-gate.test.ts"
+					}
+				]
+			}
+		}
+	]
+}
