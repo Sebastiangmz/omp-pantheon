@@ -63,8 +63,10 @@ const DeterministicJudgeSchema = Type.Object(
 const LlmJudgeSchema = Type.Object(
 	{
 		type: Type.Literal("llm"),
+		rubric: nonEmptyString,
+		model: Type.Optional(nonEmptyString),
 	},
-	{ additionalProperties: true },
+	{ additionalProperties: false },
 );
 
 const HumanJudgeSchema = Type.Object(
@@ -180,6 +182,8 @@ export type DeterministicJudge = {
 
 export type LlmJudge = {
 	type: "llm";
+	rubric: string;
+	model?: string;
 };
 
 export type HumanJudge = {
@@ -430,6 +434,14 @@ function validateJudge(value: unknown, path: string, errors: ErrorSink): void {
 	requireOneOf(value, joinPath(path, "type"), EVAL_JUDGE_TYPES, errors);
 	if (value.type === "deterministic") {
 		rejectUnknownProperties(value, path, ["type", "assertions"], errors);
+	}
+	if (value.type === "llm") {
+		rejectUnknownProperties(value, path, ["type", "rubric", "model"], errors);
+		requireString(value, joinPath(path, "rubric"), errors);
+		if (value.model !== undefined) {
+			requireString(value, joinPath(path, "model"), errors);
+		}
+		return;
 	}
 	if (value.type !== "deterministic") {
 		return;

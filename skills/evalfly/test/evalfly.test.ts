@@ -584,6 +584,44 @@ describe("evalfly CLI", () => {
 		expect(report).toContain("critical_regressions: 1");
 	});
 
+	test("run records llm judge cases as unsupported without calling an llm", async () => {
+		const cwd = await makeProject({
+			schema_version: "evalfly.config.v1",
+			name: "LLM metadata suite",
+			cases: [
+				{
+					...validCase,
+					case_id: "llm-advisory-case",
+					title: "LLM advisory case",
+					judge: {
+						type: "llm",
+						rubric: "Judge whether the answer cites the EvalFly report path.",
+						model: "gpt-4.1-mini",
+					},
+				},
+			],
+		});
+
+		const result = await dispatch(["run", "--suite", "smoke"], {
+			cwd,
+			now: () => new Date("2026-06-20T12:00:00.000Z"),
+			runId: "run-llm-advisory",
+		});
+
+		expect(result.exitCode).toBe(1);
+		const run = JSON.parse(
+			await readFile(
+				join(cwd, "evals", "runs", "run-llm-advisory.json"),
+				"utf8",
+			),
+		);
+		expect(run.results[0]).toMatchObject({
+			case_id: "llm-advisory-case",
+			passed: false,
+			errors: ["unsupported judge type: llm"],
+		});
+	});
+
 	test("latest prints the newest valid run and report path", async () => {
 		const cwd = await makeProject();
 		await writeFile(join(cwd, "expected.txt"), "ok");

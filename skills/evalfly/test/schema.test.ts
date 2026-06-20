@@ -222,6 +222,36 @@ describe("evalfly schema validation", () => {
 		expect(result.ok).toBe(true);
 	});
 
+	test("llm judge metadata requires a rubric and allows optional model", () => {
+		const result = validateEvalCase({
+			...validCase,
+			judge: {
+				type: "llm",
+				rubric: "Judge whether the answer cites the EvalFly report path.",
+				model: "gpt-4.1-mini",
+			},
+		});
+
+		expect(result.ok).toBe(true);
+	});
+
+	test("llm judge metadata rejects missing rubric", () => {
+		const result = validateEvalCase({
+			...validCase,
+			judge: {
+				type: "llm",
+				model: "gpt-4.1-mini",
+			},
+		});
+
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.errors.join("\n")).toContain(
+				"judge.rubric must be a non-empty string",
+			);
+		}
+	});
+
 	test("run schema accepts optional SpecSafe linkage context", () => {
 		const run: EvalRun = {
 			schema_version: "evalfly.run.v1",
