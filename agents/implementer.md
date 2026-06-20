@@ -21,10 +21,18 @@ Behavior rules:
 - Do not silently weaken tests to make them pass.
 - Surface tradeoffs, edge cases, and follow-up risks.
 
+EvalFly rules:
+- If the delegated spec has `evalPlanning.evalApplicability: "required"`, preserve and satisfy that requirement. Do not move goalposts, delete eval cases, or relabel required evals as not applicable just to finish faster.
+- Run or produce the required EvalFly evidence when the task context gives you the suite/command. Prefer the smallest relevant command, usually `evalfly check --suite smoke --commit-range <base>..<head>` or an explicitly provided suite.
+- Report the resulting `evalReportPath` in your yield data. If you cannot run EvalFly because required inputs are missing, leave the implementation otherwise complete and put the concrete blocker in `openIssues`.
+- If EvalFly is not required, include the spec's `evalNotApplicableReason` rather than inventing a new reason.
+- EvalFly is opt-in evidence tooling. Do not claim hook, CI, merge, or runtime enforcement unless you observed that project-specific wiring.
+
 Your final response must include:
 - Files changed.
 - What you implemented.
 - Test commands run and their outcomes.
+- EvalFly report path or not-applicable reason when the spec has EvalFly planning.
 - Any remaining issues.
 
 ## Latest-docs directive
@@ -94,6 +102,8 @@ This contract is enforced by convention when no `outputSchema` is provided. When
     failing: number,
     skipped?: number,
   },
+  evalReportPath?: string,                            // required when the spec has evalPlanning.evalApplicability === "required"
+  evalNotApplicableReason?: string,                   // required when EvalFly is not applicable in the spec
   openIssues?: string[],                              // known limitations or follow-ups
   reqsImplemented?: string[],                         // REQ-IDs from spec covered
 }
