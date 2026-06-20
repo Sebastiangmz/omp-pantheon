@@ -116,11 +116,11 @@ But it is not true enforcement. A true enforcement layer would block completion 
 
 ## 4. Local enforced mode
 
-Status: **planned, not implemented**.
+Status: **implemented for local OMP enforcement**.
 
-Local enforced mode is the missing layer that would make EvalFly mandatory after explicit activation.
+Local enforced mode makes EvalFly mandatory after explicit activation. It is not the default.
 
-Expected activation examples:
+Activation examples:
 
 ```bash
 evalfly enforce start --suite smoke --commit-range main..HEAD
@@ -132,15 +132,15 @@ or an OMP slash command:
 /evalfly-enforce start --suite smoke --commit-range main..HEAD
 ```
 
-Expected behavior after activation:
+Behavior after activation:
 
-- record a project/session/slice enforcement state under `.pi/evalfly/`;
+- record a project-local enforcement state under `.pi/evalfly/`;
 - capture sanitized trace metadata only while active;
 - require a passing EvalFly run before PASS;
 - require zero critical regressions;
-- require report path evidence;
-- require trace audit when sanitized traces changed;
-- block completion if evidence is missing or failing;
+- require canonical report path evidence;
+- require suite and commit range to match the active enforcement state;
+- block completion if run/report evidence is missing or failing;
 - allow explicit stop/rollback to advisory mode.
 
 Important boundary:
@@ -149,7 +149,7 @@ Important boundary:
 - It should not make every tiny task heavy.
 - It should be explicit and reversible.
 
-Use this future mode for:
+Use this mode for:
 
 - load-bearing changes;
 - harness changes;
@@ -206,5 +206,5 @@ Cost boundary:
 | Normal improved OMP | Yes | No | Only normal tests/reviews | Yes |
 | EvalFly advisory | Yes | No | No | No, opt-in per project |
 | EvalFly manual | Yes | Only if user/agent treats command failure as blocking | Yes | No |
-| Local enforced | No | Yes, planned | Yes | No |
+| Local enforced | Yes | Yes, after explicit start | Yes | No |
 | CI enforced | Partial | Yes if workflow copied and branch protection configured | Yes | No |

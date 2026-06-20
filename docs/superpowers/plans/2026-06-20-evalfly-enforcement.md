@@ -4,7 +4,7 @@
 
 **Goal:** Build explicit opt-in EvalFly enforcement for OMP without changing the default advisory behavior.
 
-**Architecture:** Keep the current default as safe advisory mode. Add a project-local enforcement state file, slash command / CLI activation, capture hooks, and a pre-completion gate that blocks only when enforcement is explicitly active for the current project/session/slice. CI enforcement stays a separate opt-in installer because GitHub billing/branch-protection availability depends on repo visibility and plan.
+**Architecture:** Keep the current default as safe advisory mode. Add a project-local enforcement state file, slash command / CLI activation, capture hooks, and a pre-completion gate that blocks only when enforcement is explicitly active for the current project and commit range. CI enforcement stays a separate opt-in installer because GitHub billing/branch-protection availability depends on repo visibility and plan.
 
 **Tech Stack:** OMP extension hooks in `extensions/oh-my-omp`, EvalFly CLI in `skills/evalfly/bin/evalfly.ts`, local state under `.pi/evalfly/`, GitHub Actions templates under `skills/evalfly/templates/github-actions/`, tests with Bun.
 
@@ -24,31 +24,32 @@ Already implemented:
 - Advisory and required GitHub Actions templates.
 - Privacy guardrails for sanitized traces.
 
-Not implemented yet:
+Implemented by this plan:
 
 - Explicit enforced-mode state machine.
 - Lifecycle/tool/agent trace capture hooks.
-- Pre-PASS enforcement gate.
-- Automatic enforcement report validation.
-- Local slash command to start/stop/status enforcement.
+- Pre-completion enforcement gate.
+- Automatic enforcement run/report validation.
+- Local slash command to start/stop/status/explain enforcement.
+
+Still outside this local-enforcement slice:
+
 - CI installer/configurator and branch-protection automation.
 - Automatic trace-to-eval candidate promotion.
 - Run-level cost/latency/model comparison.
-
 ---
 
 ## File structure
 
 Create or modify these units:
 
-- Create: `docs/evalfly/enforcement.md` — user-facing enforced-mode documentation.
-- Create: `extensions/oh-my-omp/evalfly/enforcement-state.ts` — read/write project-local enforcement state.
-- Create: `extensions/oh-my-omp/evalfly/enforcement-gate.ts` — checks whether a session/slice may complete.
+- Modify: `docs/evalfly/README.md`, `docs/evalfly/modes.md`, `docs/evalfly/manual-cli.md`, `docs/evalfly/artifacts-and-traces.md`, `docs/evalfly/enforcement-roadmap.md` — user-facing enforced-mode documentation.
+- Create: `skills/evalfly/bin/enforcement-state.ts` — vendorable read/write project-local enforcement state.
+- Create: `extensions/oh-my-omp/evalfly/enforcement-gate.ts` — checks whether a project may complete while enforcement is active.
 - Create: `extensions/oh-my-omp/evalfly/trace-buffer.ts` — in-memory/session trace collector with explicit sanitization boundaries.
-- Modify: `extensions/oh-my-omp/hooks/evalfly-advisor.ts` — keep advisor behavior but route through shared EvalFly mode helpers.
 - Modify: `extensions/oh-my-omp/index.ts` — register enforced-mode hooks after tests prove default behavior unchanged.
 - Create: `commands/evalfly-enforce.md` — slash command UX for `start`, `status`, `stop`, `explain`.
-- Modify: `skills/evalfly/bin/evalfly.ts` — add `enforce status/start/stop/check-finalize` only after extension state API is tested.
+- Modify: `skills/evalfly/bin/evalfly.ts` — add `enforce status/start/stop/explain` using the vendorable state module.
 - Create: `test/evalfly-enforcement-state.test.ts` — state-machine tests.
 - Create: `test/evalfly-enforcement-gate.test.ts` — blocking/non-blocking gate tests.
 - Create: `test/evalfly-trace-capture-hook.test.ts` — capture hooks are opt-in and redact/drop raw fields.
@@ -62,7 +63,7 @@ Do not mutate global `~/.omp` state during implementation tests. Use temporary p
 ### Task 1: Enforcement state model
 
 **Files:**
-- Create: `extensions/oh-my-omp/evalfly/enforcement-state.ts`
+- Create: `skills/evalfly/bin/enforcement-state.ts`
 - Test: `test/evalfly-enforcement-state.test.ts`
 
 - [ ] **Step 1: Write failing tests for explicit inactive default**
@@ -75,7 +76,7 @@ import { join } from "node:path";
 import {
   readEvalFlyEnforcementState,
   writeEvalFlyEnforcementState,
-} from "../extensions/oh-my-omp/evalfly/enforcement-state";
+} from "../skills/evalfly/bin/enforcement-state";
 
 describe("EvalFly enforcement state", () => {
   test("is inactive when no state file exists", () => {
@@ -97,7 +98,7 @@ Expected: FAIL because `enforcement-state` module does not exist.
 
 - [ ] **Step 3: Implement minimal state reader/writer**
 
-Create `extensions/oh-my-omp/evalfly/enforcement-state.ts`:
+Create `skills/evalfly/bin/enforcement-state.ts`:
 
 ```ts
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -191,7 +192,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add extensions/oh-my-omp/evalfly/enforcement-state.ts test/evalfly-enforcement-state.test.ts
+git add skills/evalfly/bin/enforcement-state.ts test/evalfly-enforcement-state.test.ts
 git commit -m "Add EvalFly enforcement state"
 ```
 
@@ -316,7 +317,7 @@ Create `commands/evalfly-enforce.md`:
 
 ```markdown
 ---
-description: Enable, inspect, or disable explicit EvalFly enforcement for this project/session.
+description: Enable, inspect, or disable explicit EvalFly enforcement for this project.
 ---
 
 # /evalfly-enforce
@@ -365,7 +366,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { evaluateEvalFlyCompletionGate } from "../extensions/oh-my-omp/evalfly/enforcement-gate";
-import { writeEvalFlyEnforcementState } from "../extensions/oh-my-omp/evalfly/enforcement-state";
+import { writeEvalFlyEnforcementState } from "../skills/evalfly/bin/enforcement-state";
 
 describe("EvalFly completion gate", () => {
   test("allows completion in advisory mode", () => {
@@ -505,7 +506,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { appendEvalFlyTraceEvent, readEvalFlyTraceBuffer } from "../extensions/oh-my-omp/evalfly/trace-buffer";
-import { writeEvalFlyEnforcementState } from "../extensions/oh-my-omp/evalfly/enforcement-state";
+import { writeEvalFlyEnforcementState } from "../skills/evalfly/bin/enforcement-state";
 
 describe("EvalFly trace buffer", () => {
   test("does not capture when enforcement is inactive", () => {

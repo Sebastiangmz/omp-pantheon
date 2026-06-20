@@ -1,6 +1,6 @@
 # EvalFly enforcement roadmap
 
-This document explains what still needs to be built to turn the current EvalFly evidence stack into real enforcement.
+This document explains the implemented local EvalFly enforcement layer, the CI boundary, and the remaining advanced work for the original closed-loop target.
 
 ---
 
@@ -15,10 +15,14 @@ EvalFly currently provides:
 - run/report evidence;
 - trace curation/import/audit tooling;
 - optional advisory hook;
+- explicit local enforced-mode state;
+- activation/status/stop commands;
+- pre-completion gate;
+- enforced-mode trace capture buffer;
 - optional GitHub Actions templates;
 - privacy guardrails.
 
-This is useful, but it is not real enforcement.
+This is real local enforcement when explicitly activated. It is not default global enforcement.
 
 Real enforcement means:
 
@@ -34,13 +38,13 @@ Default OMP remains advisory/manual so daily work is not made heavy by accident.
 
 A user or project should explicitly activate enforcement when the extra guarantees are worth the friction.
 
-Expected future command:
+Local command:
 
 ```bash
 evalfly enforce start --suite smoke --commit-range main..HEAD
 ```
 
-Expected future slash command:
+Slash command:
 
 ```txt
 /evalfly-enforce start --suite smoke --commit-range main..HEAD
@@ -68,9 +72,9 @@ The safer model is:
 
 ---
 
-## Local enforced mode: not implemented yet
+## Local enforced mode: implemented
 
-Local enforced mode should add these components:
+Local enforced mode now has these components:
 
 ### 1. Enforcement state
 
@@ -98,7 +102,7 @@ This state makes enforcement explicit and reversible.
 
 ### 2. Activation/status/stop commands
 
-Future CLI:
+CLI:
 
 ```bash
 evalfly enforce status
@@ -106,7 +110,7 @@ evalfly enforce start --suite smoke --commit-range main..HEAD
 evalfly enforce stop
 ```
 
-Future slash command:
+Slash command:
 
 ```txt
 /evalfly-enforce status
@@ -116,19 +120,19 @@ Future slash command:
 
 ### 3. Pre-completion gate
 
-When enforcement is active, OMP should block completion unless:
+When enforcement is active, OMP blocks completion unless:
 
 - latest relevant EvalFly run exists;
-- report path exists;
+- report path exists and is the canonical `evals/reports/<run-id>.md`;
+- saved run JSON validates as `evalfly.run.v1`;
 - verdict is `pass`;
 - critical regressions are `0`;
 - required suite matches the active state;
-- commit range or SpecSafe slice matches current work when configured;
-- trace audit passes when sanitized traces changed.
+- commit range matches the active state when configured.
 
 ### 4. Trace capture hooks
 
-When enforcement is active, OMP should capture sanitized metadata from lifecycle/tool/agent events.
+When enforcement is active, OMP captures sanitized metadata from tool and agent events into an in-memory buffer.
 
 The capture layer must not store raw payloads. It should only store safe fields such as:
 
@@ -147,11 +151,16 @@ Raw `input`, `output`, and `content` must be dropped or never captured.
 
 ### 5. Final evidence packet
 
-When enforcement is active, completion should produce or require:
+When enforcement is active, completion requires the latest matching run/report evidence:
 
 ```txt
 evals/runs/<run-id>.json
 evals/reports/<run-id>.md
+```
+
+Trace artifacts remain opt-in evidence and should be added when the work involves agent/tool behavior:
+
+```txt
 evals/traces/sanitized/<trace-id>.json
 ```
 
@@ -162,7 +171,7 @@ The final answer should cite:
 - suite;
 - verdict;
 - critical regression count;
-- trace audit status;
+- trace audit status when traces were used;
 - SpecSafe slice/session if linked.
 
 ---
@@ -217,7 +226,7 @@ Enforced mode should not:
 
 ---
 
-## Implementation plan
+## Implementation plan status
 
 Detailed implementation steps are in:
 
@@ -225,7 +234,7 @@ Detailed implementation steps are in:
 docs/superpowers/plans/2026-06-20-evalfly-enforcement.md
 ```
 
-The plan builds enforcement incrementally:
+Implemented in this slice:
 
 1. State model.
 2. Activation commands.

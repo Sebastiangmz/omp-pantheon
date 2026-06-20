@@ -46,6 +46,9 @@ Run commands from the project root that contains `evals/config.json`. After inst
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts validate
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts run --suite smoke [--commit-range main..HEAD]
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts check --suite smoke [--commit-range main..HEAD]
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts enforce status
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts enforce start --suite smoke --commit-range main..HEAD
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts enforce stop
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts latest
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts list
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts summary
@@ -64,6 +67,9 @@ When developing this bundle itself, the repo-local path also works:
 bun run skills/evalfly/bin/evalfly.ts validate
 bun run skills/evalfly/bin/evalfly.ts run --suite smoke [--commit-range main..HEAD]
 bun run skills/evalfly/bin/evalfly.ts check --suite smoke [--commit-range main..HEAD]
+bun run skills/evalfly/bin/evalfly.ts enforce status
+bun run skills/evalfly/bin/evalfly.ts enforce start --suite smoke --commit-range main..HEAD
+bun run skills/evalfly/bin/evalfly.ts enforce stop
 bun run skills/evalfly/bin/evalfly.ts latest
 bun run skills/evalfly/bin/evalfly.ts list
 bun run skills/evalfly/bin/evalfly.ts report <run-id>
@@ -80,6 +86,7 @@ bun run skills/evalfly/bin/evalfly.ts import-session-trace <raw-relative-path> <
 - `run --suite smoke` executes deterministic cases in the smoke suite and writes `evals/runs/<run-id>.json` plus `evals/reports/<run-id>.md`.
 - `run --suite smoke --commit-range main..HEAD` adds the commit range to the run context. When `.pi/.specsafe-state.json` has an open `currentSlice`, evalfly also copies `currentSlice.id` and `currentSlice.sessionId` into the run/report by reference without mutating SpecSafe state.
 - `check --suite smoke` is the explicit local gate command: it validates config, runs the smoke suite, writes the same run/report evidence, prints the report path, and exits nonzero on a failing verdict. It is not wired into hooks, CI, or merges unless a project chooses to call it.
+- `enforce status/start/stop` controls explicit local enforcement. `start --suite smoke --commit-range <range>` writes `.pi/evalfly/enforcement.json`; when active, the OMP `session_stop` gate requires a matching latest passing EvalFly run, zero critical regressions, and a canonical report path before allowing completion. `stop` returns to advisory mode.
 - `latest` reads `evals/runs/*.json`, validates saved run records, and prints the newest run id, verdict, suite, and report path for handoff or review.
 - `list` reads `evals/runs/*.json`, validates saved run records, and prints all runs newest-first with canonical report paths for review triage.
 - `summary` reads saved runs, validates them, and prints aggregate run counts, critical regressions, latest context, and the latest canonical report path.
@@ -109,4 +116,4 @@ Retention policy: raw files under `.pi/evalfly/raw/` are local scratch only and 
 
 ## Current scope
 
-Evalfly is evidence tooling, not ambient enforcement. The contract MVP does not install CI gates, blocking hook enforcement, automatic raw trace capture, required LLM-as-judge execution, or external-memory dependencies. Projects that deliberately want CI enforcement can copy `templates/github-actions/evalfly-required-gate.yml` and configure branch protection themselves. The optional `evalfly-advisor` extension hook is inactive unless a project opts in with `.pi/evalfly/hints-enabled` and `evals/config.json`; it only injects non-blocking reminder context.
+Evalfly is opt-in evidence and enforcement tooling. It does not install CI gates, branch protection, required LLM-as-judge execution, external-memory dependencies, or global enforcement by default. Local enforcement exists only after `evalfly enforce start --suite smoke --commit-range <range>` writes project-local state; then OMP's local `session_stop` gate blocks completion until matching EvalFly evidence exists. Projects that deliberately want CI enforcement can copy `templates/github-actions/evalfly-required-gate.yml` and configure branch protection themselves. The optional `evalfly-advisor` extension hook is inactive unless a project opts in with `.pi/evalfly/hints-enabled` and `evals/config.json`; it only injects non-blocking reminder context.

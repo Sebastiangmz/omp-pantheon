@@ -7,10 +7,10 @@ EvalFly is **not one single mode**. It is a set of layers:
 1. Normal improved OMP behavior.
 2. EvalFly advisory mode.
 3. EvalFly manual CLI usage.
-4. Future local enforced mode.
+4. Local enforced mode.
 5. Optional CI enforcement.
 
-The current shipped implementation is intentionally safe by default: advisory/manual, not globally enforced.
+The current shipped implementation is intentionally safe by default: advisory/manual unless a project explicitly activates local enforcement.
 
 ---
 
@@ -41,7 +41,7 @@ This moves OMP from “the agent says it tested” toward “the repo contains r
 | Normal improved OMP | Implemented | Uses improved agent contracts, tests, review-work, SpecSafe, and existing harness discipline. | Does not require EvalFly by default. |
 | EvalFly advisory | Implemented | Injects a non-blocking reminder when project opts in with `.pi/evalfly/hints-enabled` and `evals/config.json`. | Does not run evals, capture traces, or block PASS. |
 | EvalFly manual | Implemented | User/agent runs `evalfly` commands explicitly to create evidence. | Does not force itself. If no one runs it, nothing blocks. |
-| Local enforced mode | Planned, not implemented | Will explicitly activate blocking local EvalFly requirements for a project/session/slice. | Does not exist yet. Needs more code. |
+| Local enforced mode | Implemented | Explicitly activates blocking local EvalFly requirements for the project and selected commit range via `evalfly enforce start`. | Does not install CI or branch protection by itself. |
 | CI enforced mode | Partially implemented | Required-gate workflow template exists. | Not installed by default; branch protection must be configured separately. |
 
 ---
@@ -66,11 +66,11 @@ Use EvalFly manual commands when:
 - you want before/after regression evidence;
 - sanitized traces changed and need audit.
 
-Use future enforced mode when:
+Use enforced mode when:
 
 - a change is load-bearing;
 - missing evidence should block completion;
-- the team wants EvalFly to be mandatory for this project/session/slice.
+- the team wants EvalFly to be mandatory for this project and selected commit range.
 
 Use CI enforcement when:
 
@@ -88,7 +88,7 @@ Core docs:
 - `docs/evalfly/manual-cli.md` — beginner explanation of manual EvalFly usage.
 - `docs/evalfly/artifacts-and-traces.md` — run/report/trace/audit explanation.
 - `docs/evalfly/modes.md` — mode comparison.
-- `docs/evalfly/enforcement-roadmap.md` — what still needs to be built for real enforcement.
+- `docs/evalfly/enforcement-roadmap.md` — current enforcement boundary and remaining non-local/advanced work.
 - `docs/evalfly/ci-enforcement.md` — GitHub Actions and branch-protection guidance.
 
 Implementation plan:
@@ -99,7 +99,7 @@ Implementation plan:
 
 ## Current honest status
 
-Current EvalFly is a strong opt-in evidence stack. It is not yet the full closed-loop enforcement target.
+Current EvalFly is now a strong opt-in evidence stack with local enforcement. It is still not mandatory globally: a project must explicitly activate local enforcement, and CI branch protection remains a separate repository setting.
 
 Implemented:
 
@@ -112,15 +112,16 @@ Implemented:
 - baseline-vs-after compare;
 - trace listing/audit/import/normalization;
 - optional advisor hook;
+- explicit local enforced-mode state in `.pi/evalfly/enforcement.json`;
+- `evalfly enforce status/start/stop/explain`;
+- enforced-mode lifecycle/tool/agent trace buffering, active only while enforcement is enabled;
+- pre-completion session gate that blocks stop when required passing evidence is missing;
 - optional GitHub Actions templates;
 - privacy and retention docs.
 
-Still missing for full enforcement:
+Still missing for the full original closed-loop target:
 
-- explicit local enforced-mode state;
-- hooks that capture lifecycle/tool/agent traces only when enforcement is active;
-- pre-completion gate that blocks PASS when active evidence is missing;
 - automatic trace-to-eval candidate workflow;
-- run-level cost/latency/model comparison;
+- run-level cost/latency/model comparison beyond stored summary metadata;
 - actual LLM/human judge execution;
 - installed required CI and branch protection automation.

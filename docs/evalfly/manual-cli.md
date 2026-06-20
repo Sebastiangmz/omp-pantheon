@@ -125,7 +125,39 @@ evalfly check run-smoke-20260620081937: pass
 report: evals/reports/run-smoke-20260620081937.md
 ```
 
-Important: this only gates the workflow that invokes it. OMP does not currently block completion if no one runs it.
+Important: by itself this only gates the workflow that invokes it. To make OMP block completion locally, activate enforced mode with `evalfly enforce start`.
+
+
+### `enforce status/start/stop`
+
+```bash
+evalfly enforce status
+evalfly enforce start --suite smoke --commit-range main..HEAD
+evalfly enforce stop
+```
+
+Controls explicit local enforcement.
+
+`status` shows whether the project is currently advisory or enforced.
+
+`start` writes:
+
+```txt
+.pi/evalfly/enforcement.json
+```
+
+After `start`, OMP's local `session_stop` gate blocks completion unless the latest saved EvalFly run:
+
+- validates as `evalfly.run.v1`;
+- matches the enforced suite;
+- matches the enforced commit range when configured;
+- has verdict `pass`;
+- has `critical_regressions: 0`;
+- points to its canonical report path `evals/reports/<run-id>.md`.
+
+`stop` writes advisory state and returns the project to non-blocking mode.
+
+Enforced mode is project-local. It is not a global OMP switch and does not configure GitHub branch protection.
 
 ---
 
