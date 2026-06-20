@@ -1,10 +1,14 @@
 # Example only. Copy this into a repository that vendors `skills/evalfly/` and has
 # `evals/config.json`. It is manual and continue-on-error by default, so installing
 # omp-pantheon never adds a CI gate.
+# Pin third-party actions to reviewed commit SHAs before using this in hardened CI.
 name: EvalFly check example
 
 on:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   evalfly-check:
@@ -13,10 +17,17 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
       - name: Run explicit EvalFly check
+        env:
+          COMMIT_RANGE: ${{ github.event.repository.default_branch }}..${{ github.sha }}
         run: |
-          bun run skills/evalfly/bin/evalfly.ts check --suite smoke --commit-range "${{ github.event.repository.default_branch }}..${{ github.sha }}"
+          bun run skills/evalfly/bin/evalfly.ts check --suite smoke --commit-range "$COMMIT_RANGE"
+      # Do not upload raw traces or secrets. EvalFly privacy metadata is not a privacy proof.
       - name: Upload EvalFly evidence
         if: always()
         uses: actions/upload-artifact@v4

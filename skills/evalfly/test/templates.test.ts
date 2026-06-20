@@ -18,6 +18,19 @@ describe("evalfly templates", () => {
 		expect(workflow).toContain(
 			"bun run skills/evalfly/bin/evalfly.ts check --suite smoke --commit-range",
 		);
+		expect(workflow).toContain("permissions:");
+		expect(workflow).toContain("contents: read");
+		expect(workflow).toContain("persist-credentials: false");
+		expect(workflow).toContain("bun install --frozen-lockfile");
+		expect(workflow.indexOf("bun install --frozen-lockfile")).toBeLessThan(
+			workflow.indexOf("bun run skills/evalfly/bin/evalfly.ts check"),
+		);
+		expect(workflow).toContain("COMMIT_RANGE:");
+		expect(workflow).toContain('--commit-range "$COMMIT_RANGE"');
+		expect(workflow).toContain("Do not upload raw traces or secrets");
+		expect(workflow).toContain(
+			"Pin third-party actions to reviewed commit SHAs",
+		);
 		expect(workflow).not.toContain("pull_request:");
 		expect(workflow).not.toContain("push:");
 	});
