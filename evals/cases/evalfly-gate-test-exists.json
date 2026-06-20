@@ -1,0 +1,21 @@
+{
+	"schema_version": "evalfly.case.v1",
+	"case_id": "evalfly-gate-test-exists",
+	"title": "EvalFly gate regression test exists",
+	"suite": "smoke",
+	"risk_tier": "critical",
+	"task_type": "test_contract",
+	"source": { "kind": "project_eval_repo" },
+	"privacy": { "classification": "public", "sanitized": true },
+	"expected": {
+		"success_criteria": [
+			"The EvalFly enforcement gate regression test exists at test/evalfly-enforcement-gate.test.ts."
+		]
+	},
+	"judge": {
+		"type": "deterministic",
+		"assertions": [
+			{ "type": "file_exists", "path": "test/evalfly-enforcement-gate.test.ts" }
+		]
+	}
+}

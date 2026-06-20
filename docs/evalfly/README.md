@@ -106,7 +106,8 @@ Implemented:
 - methodology skill;
 - agent contracts;
 - deterministic EvalFly runner;
-- local project eval template;
+- vendorable local project eval template;
+- this repository's own `evals/` smoke suite for critical EvalFly harness files;
 - manual gate command;
 - run/report artifacts;
 - baseline-vs-after compare;
