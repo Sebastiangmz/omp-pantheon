@@ -34,7 +34,7 @@ const UNSANITIZED_TRACE_PATTERNS = [
 ] as const;
 
 const USAGE =
-	"Usage: evalfly validate | run --suite smoke | check --suite smoke | latest | list | summary | traces | report <run-id> | curate-trace <raw-relative-path> <sanitized-name>";
+	"Usage: evalfly validate | run --suite smoke | check --suite smoke | latest | list | summary | traces | compare <baseline-run-id> <after-run-id> | report <run-id> | curate-trace <raw-relative-path> <sanitized-name>";
 
 export type DispatchOptions = {
 	cwd?: string;
@@ -90,6 +90,9 @@ export async function dispatch(
 		}
 		if (command === "summary") {
 			return await summaryCommand(cwd);
+		}
+		if (command === "compare") {
+			return await compareCommand(args.slice(1), cwd);
 		}
 		if (command === "traces") {
 			return await tracesCommand(cwd);
@@ -214,6 +217,57 @@ async function reportCommand(
 		stdout: `evalfly report written: ${join("evals", "reports", `${runId}.md`)}\n`,
 		stderr: "",
 	};
+}
+
+async function compareCommand(
+	args: string[],
+	cwd: string,
+): Promise<DispatchResult> {
+	if (args.length !== 2) {
+		throw new Error("compare requires <baseline-run-id> <after-run-id>");
+	}
+	const [baselineRunId, afterRunId] = args;
+	assertSafeRunId(baselineRunId);
+	assertSafeRunId(afterRunId);
+	const runs = await readSavedRuns(cwd);
+	const baseline = findRun(runs, baselineRunId);
+	const after = findRun(runs, afterRunId);
+	const totalDelta = after.summary.total - baseline.summary.total;
+	const passedDelta = after.summary.passed - baseline.summary.passed;
+	const failedDelta = after.summary.failed - baseline.summary.failed;
+	const criticalDelta =
+		after.summary.critical_regressions - baseline.summary.critical_regressions;
+	const passed =
+		after.summary.critical_regressions === 0 &&
+		failedDelta <= 0 &&
+		criticalDelta <= 0;
+	const lines = [
+		`evalfly compare: ${baseline.run_id} -> ${after.run_id}`,
+		`baseline verdict: ${baseline.verdict}`,
+		`after verdict: ${after.verdict}`,
+		`total delta: ${formatDelta(totalDelta)}`,
+		`passed delta: ${formatDelta(passedDelta)}`,
+		`failed delta: ${formatDelta(failedDelta)}`,
+		`critical_regressions delta: ${formatDelta(criticalDelta)}`,
+		`verdict: ${passed ? "pass" : "fail"}`,
+	];
+	return {
+		exitCode: passed ? 0 : 1,
+		stdout: `${lines.join("\n")}\n`,
+		stderr: "",
+	};
+}
+
+function findRun(runs: EvalRun[], runId: string): EvalRun {
+	const run = runs.find((candidate) => candidate.run_id === runId);
+	if (!run) {
+		throw new Error(`evalfly run not found: ${runId}`);
+	}
+	return run;
+}
+
+function formatDelta(value: number): string {
+	return value > 0 ? `+${value}` : String(value);
 }
 
 async function latestCommand(cwd: string): Promise<DispatchResult> {

@@ -58,6 +58,40 @@ function caseWithFileExistsPath(path: string) {
 	};
 }
 
+async function writeSavedRun(
+	cwd: string,
+	runId: string,
+	summary: {
+		total: number;
+		passed: number;
+		failed: number;
+		critical_regressions: number;
+	},
+) {
+	await mkdir(join(cwd, "evals", "runs"), { recursive: true });
+	await writeFile(
+		join(cwd, "evals", "runs", `${runId}.json`),
+		JSON.stringify(
+			{
+				schema_version: "evalfly.run.v1",
+				run_id: runId,
+				suite: "smoke",
+				config_name: "Smoke suite",
+				created_at: "2026-06-20T12:00:00.000Z",
+				results: [],
+				summary,
+				verdict:
+					summary.failed === 0 && summary.critical_regressions === 0
+						? "pass"
+						: "fail",
+				context: { eval_report_path: join("evals", "reports", `${runId}.md`) },
+			},
+			null,
+			2,
+		),
+	);
+}
+
 describe("evalfly CLI", () => {
 	test("validate succeeds on valid evals tree", async () => {
 		const cwd = await makeProject();
@@ -773,6 +807,69 @@ describe("evalfly CLI", () => {
 		expect(result.stderr).toContain(
 			"unsafe sanitized trace: evals/traces/sanitized/outside.txt",
 		);
+	});
+
+	test("compare reports baseline-to-after deltas for an improved run", async () => {
+		const cwd = await makeProject();
+		await writeSavedRun(cwd, "baseline-run", {
+			total: 2,
+			passed: 1,
+			failed: 1,
+			critical_regressions: 1,
+		});
+		await writeSavedRun(cwd, "after-run", {
+			total: 2,
+			passed: 2,
+			failed: 0,
+			critical_regressions: 0,
+		});
+
+		const result = await dispatch(["compare", "baseline-run", "after-run"], {
+			cwd,
+		});
+
+		expect(result.exitCode).toBe(0);
+		expect(result.stderr).toBe("");
+		expect(result.stdout).toContain(
+			"evalfly compare: baseline-run -> after-run",
+		);
+		expect(result.stdout).toContain("baseline verdict: fail");
+		expect(result.stdout).toContain("after verdict: pass");
+		expect(result.stdout).toContain("passed delta: +1");
+		expect(result.stdout).toContain("failed delta: -1");
+		expect(result.stdout).toContain("critical_regressions delta: -1");
+		expect(result.stdout).toContain("verdict: pass");
+	});
+
+	test("compare fails when the after run adds a critical regression", async () => {
+		const cwd = await makeProject();
+		await writeSavedRun(cwd, "baseline-run", {
+			total: 1,
+			passed: 1,
+			failed: 0,
+			critical_regressions: 0,
+		});
+		await writeSavedRun(cwd, "after-run", {
+			total: 1,
+			passed: 0,
+			failed: 1,
+			critical_regressions: 1,
+		});
+
+		const result = await dispatch(["compare", "baseline-run", "after-run"], {
+			cwd,
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toBe("");
+		expect(result.stdout).toContain(
+			"evalfly compare: baseline-run -> after-run",
+		);
+		expect(result.stdout).toContain("baseline verdict: pass");
+		expect(result.stdout).toContain("after verdict: fail");
+		expect(result.stdout).toContain("failed delta: +1");
+		expect(result.stdout).toContain("critical_regressions delta: +1");
+		expect(result.stdout).toContain("verdict: fail");
 	});
 
 	test("list rejects malformed saved run records instead of hiding them", async () => {
