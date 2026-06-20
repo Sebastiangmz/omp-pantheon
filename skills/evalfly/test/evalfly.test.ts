@@ -1579,6 +1579,110 @@ describe("evalfly CLI", () => {
 			),
 		).toBe("sentinel\n");
 	});
+
+	test("normalize-trace writes a whitelisted sanitized trace from raw JSONL", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });
+		const rawTrace = [
+			{
+				trace_id: "trace-123",
+				slice_id: "EVALFLY-38",
+				agent: "validator",
+				model: "gpt-5-mini",
+				role: "assistant",
+				input: "raw private prompt that must be dropped",
+				sanitized_input: "Check EvalFly report path",
+				sanitized_output: "Reported evals/reports/run-smoke.md",
+				latency_ms: 1200,
+				cost_usd: 0.0042,
+				verdict: "pass",
+			},
+			{
+				trace_id: "trace-123",
+				type: "tool_call",
+				tool_name: "read",
+				status: "success",
+				output: "raw tool output that must be dropped",
+				latency_ms: 20,
+			},
+		]
+			.map((event) => JSON.stringify(event))
+			.join("\n");
+		await writeFile(
+			join(cwd, ".pi", "evalfly", "raw", "trace.jsonl"),
+			rawTrace,
+		);
+
+		const result = await dispatch(
+			["normalize-trace", "trace.jsonl", "normalized.json"],
+			{ cwd },
+		);
+
+		expect(result.exitCode).toBe(0);
+		expect(result.stdout).toContain("evals/traces/sanitized/normalized.json");
+		const normalized = JSON.parse(
+			await readFile(
+				join(cwd, "evals", "traces", "sanitized", "normalized.json"),
+				"utf8",
+			),
+		);
+		expect(normalized).toEqual({
+			schema_version: "evalfly.trace.v1",
+			trace_id: "trace-123",
+			slice_id: "EVALFLY-38",
+			events: [
+				{
+					type: "message",
+					agent: "validator",
+					model: "gpt-5-mini",
+					role: "assistant",
+					sanitized_input: "Check EvalFly report path",
+					sanitized_output: "Reported evals/reports/run-smoke.md",
+					latency_ms: 1200,
+					cost_usd: 0.0042,
+					verdict: "pass",
+				},
+				{
+					type: "tool_call",
+					tool_name: "read",
+					status: "success",
+					latency_ms: 20,
+				},
+			],
+			summary: {
+				events: 2,
+				tool_calls: 1,
+				total_cost_usd: 0.0042,
+				total_latency_ms: 1220,
+			},
+		});
+		const normalizedText = JSON.stringify(normalized);
+		expect(normalizedText).not.toContain("raw private prompt");
+		expect(normalizedText).not.toContain("raw tool output");
+	});
+
+	test("normalize-trace rejects unsanitized whitelisted text before writing", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });
+		await writeFile(
+			join(cwd, ".pi", "evalfly", "raw", "trace.jsonl"),
+			`${JSON.stringify({
+				trace_id: "trace-123",
+				sanitized_output: "Email sebastian@example.com should fail",
+			})}\n`,
+		);
+
+		const result = await dispatch(
+			["normalize-trace", "trace.jsonl", "normalized.json"],
+			{ cwd },
+		);
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("trace appears unsanitized");
+		await expect(
+			readFile(join(cwd, "evals", "traces", "sanitized", "normalized.json")),
+		).rejects.toThrow();
+	});
 	test("curate-trace refuses unsafe sanitized trace names", async () => {
 		const cwd = await makeProject();
 		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });

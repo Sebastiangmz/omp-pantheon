@@ -34,7 +34,7 @@ const UNSANITIZED_TRACE_PATTERNS = [
 ] as const;
 
 const USAGE =
-	"Usage: evalfly validate | run --suite smoke | check --suite smoke | latest | list | summary | traces | compare <baseline-run-id> <after-run-id> | report <run-id> | curate-trace <raw-relative-path> <sanitized-name>";
+	"Usage: evalfly validate | run --suite smoke | check --suite smoke | latest | list | summary | traces | compare <baseline-run-id> <after-run-id> | report <run-id> | curate-trace <raw-relative-path> <sanitized-name> | normalize-trace <raw-relative-path> <sanitized-name>";
 
 export type DispatchOptions = {
 	cwd?: string;
@@ -102,6 +102,9 @@ export async function dispatch(
 		}
 		if (command === "curate-trace") {
 			return await curateTraceCommand(args.slice(1), cwd);
+		}
+		if (command === "normalize-trace") {
+			return await normalizeTraceCommand(args.slice(1), cwd);
 		}
 		return {
 			exitCode: 1,
@@ -489,6 +492,182 @@ async function curateTraceCommand(
 		stdout: `evalfly trace curated: ${join("evals", "traces", "sanitized", sanitizedName)}\n`,
 		stderr: "",
 	};
+}
+
+async function normalizeTraceCommand(
+	args: string[],
+	cwd: string,
+): Promise<DispatchResult> {
+	const [rawPath, sanitizedName] = args;
+	if (!rawPath || !sanitizedName) {
+		return {
+			exitCode: 1,
+			stdout: "",
+			stderr: "normalize-trace requires <raw-relative-path> <sanitized-name>\n",
+		};
+	}
+	assertSafeRelativePath("raw trace path", rawPath);
+	assertSafeTraceName(sanitizedName);
+	const rawTracePath = await boundedPath(
+		cwd,
+		[".pi", "evalfly", "raw"],
+		rawPath,
+	);
+	const normalizedTrace = normalizeTraceJsonl(
+		await readFile(rawTracePath, "utf8"),
+	);
+	const content = `${JSON.stringify(normalizedTrace, null, 2)}\n`;
+	assertSanitizedTrace(content);
+	const targetDir = await ensureSanitizedTraceDir(cwd);
+	const targetPath = resolve(targetDir, sanitizedName);
+	if (
+		relative(targetDir, targetPath) === ".." ||
+		relative(targetDir, targetPath).startsWith(`..${sep}`)
+	) {
+		throw new Error(`unsafe sanitized trace name: ${sanitizedName}`);
+	}
+	try {
+		await access(targetPath);
+		throw new Error(`sanitized trace already exists: ${sanitizedName}`);
+	} catch (error) {
+		if (!missingPathError(error)) {
+			throw error;
+		}
+	}
+	await writeFile(targetPath, content, { flag: "wx" });
+	return {
+		exitCode: 0,
+		stdout: `evalfly trace normalized: ${join("evals", "traces", "sanitized", sanitizedName)}\n`,
+		stderr: "",
+	};
+}
+
+function normalizeTraceJsonl(content: string): Record<string, unknown> {
+	const events: Record<string, unknown>[] = [];
+	let traceId: string | undefined;
+	let sliceId: string | undefined;
+	let totalCostUsd = 0;
+	let totalLatencyMs = 0;
+	let toolCalls = 0;
+	const lines = content
+		.split(/\r?\n/)
+		.map((line) => line.trim())
+		.filter((line) => line.length > 0);
+	if (lines.length === 0) {
+		throw new Error("raw trace is empty");
+	}
+	for (const [index, line] of lines.entries()) {
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(line);
+		} catch (error) {
+			throw new Error(
+				`invalid raw trace JSONL line ${index + 1}: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
+		if (!isRecord(parsed)) {
+			throw new Error(
+				`invalid raw trace JSONL line ${index + 1}: expected object`,
+			);
+		}
+		const eventTraceId = optionalTraceLine("trace_id", parsed.trace_id);
+		if (eventTraceId) {
+			if (traceId && traceId !== eventTraceId) {
+				throw new Error("raw trace contains conflicting trace_id values");
+			}
+			traceId = eventTraceId;
+		}
+		const eventSliceId = optionalTraceLine("slice_id", parsed.slice_id);
+		if (eventSliceId) {
+			if (sliceId && sliceId !== eventSliceId) {
+				throw new Error("raw trace contains conflicting slice_id values");
+			}
+			sliceId = eventSliceId;
+		}
+		const event = normalizeTraceEvent(parsed);
+		if (event.type === "tool_call") {
+			toolCalls += 1;
+		}
+		if (typeof event.cost_usd === "number") {
+			totalCostUsd += event.cost_usd;
+		}
+		if (typeof event.latency_ms === "number") {
+			totalLatencyMs += event.latency_ms;
+		}
+		events.push(event);
+	}
+	return {
+		schema_version: "evalfly.trace.v1",
+		...(traceId ? { trace_id: traceId } : {}),
+		...(sliceId ? { slice_id: sliceId } : {}),
+		events,
+		summary: {
+			events: events.length,
+			tool_calls: toolCalls,
+			total_cost_usd: Number(totalCostUsd.toFixed(6)),
+			total_latency_ms: totalLatencyMs,
+		},
+	};
+}
+
+function normalizeTraceEvent(
+	event: Record<string, unknown>,
+): Record<string, unknown> {
+	const toolName = optionalTraceLine("tool_name", event.tool_name);
+	const type =
+		optionalTraceLine("type", event.type) ??
+		(toolName ? "tool_call" : "message");
+	const normalized: Record<string, unknown> = { type };
+	copyOptionalLine(normalized, "timestamp", event.timestamp);
+	copyOptionalLine(normalized, "agent", event.agent);
+	copyOptionalLine(normalized, "model", event.model);
+	copyOptionalLine(normalized, "role", event.role);
+	if (toolName) {
+		normalized.tool_name = toolName;
+	}
+	copyOptionalLine(normalized, "status", event.status);
+	copyOptionalLine(normalized, "sanitized_input", event.sanitized_input);
+	copyOptionalLine(normalized, "sanitized_output", event.sanitized_output);
+	copyOptionalLine(normalized, "verdict", event.verdict);
+	copyOptionalNonNegativeNumber(normalized, "latency_ms", event.latency_ms);
+	copyOptionalNonNegativeNumber(normalized, "cost_usd", event.cost_usd);
+	return normalized;
+}
+
+function copyOptionalLine(
+	target: Record<string, unknown>,
+	key: string,
+	value: unknown,
+): void {
+	const line = optionalTraceLine(key, value);
+	if (line) {
+		target[key] = line;
+	}
+}
+
+function optionalTraceLine(label: string, value: unknown): string | undefined {
+	if (value === undefined || value === null || value === "") {
+		return undefined;
+	}
+	if (typeof value !== "string") {
+		throw new Error(`${label} must be a string`);
+	}
+	assertContextLine(label, value);
+	return value;
+}
+
+function copyOptionalNonNegativeNumber(
+	target: Record<string, unknown>,
+	key: string,
+	value: unknown,
+): void {
+	if (value === undefined || value === null) {
+		return;
+	}
+	if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+		throw new Error(`${key} must be a non-negative number`);
+	}
+	target[key] = value;
 }
 
 async function loadConfig(cwd: string): Promise<EvalConfig> {
