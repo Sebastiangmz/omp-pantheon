@@ -2,6 +2,8 @@
 
 `evalfly` is the opt-in CLI for the Evaluation Flywheel contract MVP. It validates a project-local `evals/config.json`, runs deterministic suites, and writes run/report evidence under `evals/runs/` and `evals/reports/`.
 
+For a beginner-oriented explanation of EvalFly modes, manual CLI usage, artifacts, traces, and future enforcement work, start with `docs/evalfly/README.md`.
+
 ## Templates
 
 Copy the evals template into a project that needs evaluation evidence:

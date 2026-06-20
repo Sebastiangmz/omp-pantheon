@@ -39,7 +39,7 @@ skills/evalfly/          opt-in evaluation template and CLI
 hooks/*.ts              OMP lifecycle hooks from Seshat/SpecSafe
 extensions/oh-my-omp/   the loop runtime + lifecycle hooks (TS extension)
 test/                   integration and regression tests for Seshat/SpecSafe
-docs/                   port notes and migration context
+docs/                   port notes, migration context, and EvalFly user guides
 package.json            root test/typecheck runner for the integrated bundle
 install.sh              symlink/copy this bundle into ~/.omp/agent/
 ```
