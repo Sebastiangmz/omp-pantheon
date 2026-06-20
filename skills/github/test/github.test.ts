@@ -115,7 +115,7 @@ function stubGh(
 			"fi",
 			`cat <<'EOF'`,
 			stdoutText,
-			`EOF`,
+			"EOF",
 			`exit ${exitCode}`,
 		].join("\n"),
 	);
@@ -136,11 +136,11 @@ function stubLinear(
 		: [
 				`cat <<'EOF'`,
 				`key:         ${"$2"}`,
-				`title:       Test Issue`,
+				"title:       Test Issue",
 				`state:       ${stateName} (${stateType})`,
-				`assignee:    nobody`,
-				`team:        TST`,
-				`EOF`,
+				"assignee:    nobody",
+				"team:        TST",
+				"EOF",
 				`exit ${exitCode}`,
 			].join("\n");
 	fs.writeFileSync(script, ["#!/usr/bin/env bash", body].join("\n"));

@@ -2,10 +2,10 @@ import { describe, expect, test } from "bun:test";
 
 import {
 	type EvalCase,
-	type EvalConfig,
-	type EvalRun,
 	EvalCaseSchema,
+	type EvalConfig,
 	EvalConfigSchema,
+	type EvalRun,
 	EvalRunSchema,
 	validateEvalCase,
 	validateEvalConfig,

@@ -16,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { LinearClientLike, DispatchOpts } from "../bin/linear.ts";
+import type { DispatchOpts, LinearClientLike } from "../bin/linear.ts";
 import { dispatch } from "../bin/linear.ts";
 
 // ---------------------------------------------------------------------------
@@ -497,7 +497,8 @@ describe("[live] linear smoke tests", () => {
 		"[live] linear list returns at least one issue",
 		async () => {
 			const { LinearClient } = await import("@linear/sdk");
-			const apiKey = process.env.LINEAR_API_KEY!;
+			const apiKey = process.env.LINEAR_API_KEY;
+			if (!apiKey) throw new Error("LINEAR_API_KEY is required for live test");
 			const tmpDir = makeTempDir();
 			try {
 				const opts: DispatchOpts = {

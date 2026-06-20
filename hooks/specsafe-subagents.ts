@@ -22,8 +22,8 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import type { HookAPI } from "./types";
 import { statePathFor } from "./specsafe-session";
+import type { HookAPI } from "./types";
 
 type SpecsafeStateSnapshot = {
 	currentSlice: {
@@ -86,7 +86,7 @@ export function commitSubagentWork(opts: {
 	if (addRes.status !== 0) {
 		return { committed: false, error: `git add failed: ${addRes.stderr}` };
 	}
-	const firstLine = (opts.message || "work").split("\n")[0]!.trim();
+	const firstLine = (opts.message || "work").split("\n")[0]?.trim() ?? "work";
 	const clipped =
 		firstLine.length > 72 ? `${firstLine.slice(0, 69)}...` : firstLine;
 	const subject = `${opts.agent}: ${clipped}`;
@@ -173,7 +173,7 @@ export default function (pi: HookAPI): void {
 					event.content as ReadonlyArray<{ type: string; text?: string }>,
 				),
 			});
-			if (result.committed && ctx.hasUI) {
+			if (result.committed && ctx.hasUI && ctx.ui) {
 				ctx.ui.notify(`auto-commit: ${agentName} on slice ${slice.id}`, "info");
 			}
 			if (result.error) {

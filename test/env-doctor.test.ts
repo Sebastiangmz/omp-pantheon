@@ -8,7 +8,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { spawnSync, type SpawnSyncReturns } from "node:child_process";
+import { type SpawnSyncReturns, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";

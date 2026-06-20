@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
 
@@ -31,7 +31,8 @@ function registerWithFakePi() {
 	const logs: string[] = [];
 	registerEvalFlyAdvisor({
 		on(event: string, handler: HookHandler) {
-			(handlers[event] ??= []).push(handler);
+			handlers[event] ??= [];
+			handlers[event].push(handler);
 		},
 		logger: {
 			debug(message: string) {

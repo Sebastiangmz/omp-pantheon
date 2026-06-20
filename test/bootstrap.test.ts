@@ -7,7 +7,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { spawnSync, type SpawnSyncReturns } from "node:child_process";
+import { type SpawnSyncReturns, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -178,7 +178,10 @@ describe("[unit] bootstrap skill", () => {
 
 		const lines = auditLogLines();
 		expect(lines).toHaveLength(1);
-		const entry = JSON.parse(lines[0]!) as {
+		const line = lines[0];
+		expect(line).toBeDefined();
+		if (!line) throw new Error("expected audit log line");
+		const entry = JSON.parse(line) as {
 			action?: unknown;
 			approver?: unknown;
 		};
@@ -275,7 +278,10 @@ describe("[unit] bootstrap skill", () => {
 			fs.existsSync(path.join(tempDir, "evals", "traces", "sanitized")),
 		).toBe(true);
 
-		const entry = JSON.parse(auditLogLines()[0]!) as { applied?: unknown };
+		const line = auditLogLines()[0];
+		expect(line).toBeDefined();
+		if (!line) throw new Error("expected audit log line");
+		const entry = JSON.parse(line) as { applied?: unknown };
 		expect(entry.applied).toContain("evals");
 	});
 

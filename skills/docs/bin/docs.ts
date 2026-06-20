@@ -47,7 +47,8 @@ export type DispatchOpts = {
 // ---------------------------------------------------------------------------
 
 const ALLOWED_PREFIXES = ["docs/", "specs/", "specs/briefs/"];
-const SCOPE_ERROR = `docs skill is scoped to BMad artifacts (paths must start with docs/, specs/, or specs/briefs/)`;
+const SCOPE_ERROR =
+	"docs skill is scoped to BMad artifacts (paths must start with docs/, specs/, or specs/briefs/)";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -165,7 +166,7 @@ function extractDiffBody(content: string): string {
 	const lines = content.split("\n");
 	let firstDiffLine = -1;
 	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i]!;
+		const line = lines[i] ?? "";
 		if (!line.startsWith("#") && line.trim() !== "") {
 			firstDiffLine = i;
 			break;
@@ -336,7 +337,7 @@ async function cmdApply(
 			draft.content,
 			"",
 			`would apply to: ${draft.header.target}`,
-			`NOT YET APPLIED (rerun with --i-approve)`,
+			"NOT YET APPLIED (rerun with --i-approve)",
 		].join("\n");
 		return { stdout: preview, stderr: "", exit: 0 };
 	}
@@ -372,8 +373,8 @@ async function cmdApply(
 	// 4. Build commit message
 	const subject = `docs: ${draft.header.rationale}`;
 	const trailers = [
-		`Proposed-By: steward`,
-		`Approved-By: luci`,
+		"Proposed-By: steward",
+		"Approved-By: luci",
 		...(sliceId ? [`Spec-Slice: ${sliceId}`] : []),
 		`Rationale-From: ${id}`,
 	].join("\n");
@@ -452,7 +453,7 @@ export async function dispatch(
 			let rationale = "";
 			for (const arg of rest.slice(1)) {
 				const m = arg.match(/^--rationale=(.+)$/s);
-				if (m) rationale = m[1]!;
+				if (m?.[1]) rationale = m[1];
 			}
 			if (!rationale) {
 				return {
