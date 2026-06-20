@@ -24,7 +24,7 @@ that doesn't stop until the work is done.
 | Layer | Pieces |
 |---|---|
 | **Agents** | Pantheon: `sisyphus`, `hephaestus`, `oracle`, `atlas`, `prometheus`, `metis`; Seshat: `steward`, `spec-writer`, `implementer`, `test-writer`, `reviewer`, `reviewer-kimi`, `validator`, `doc-scout` |
-| **Slash commands** | `/ultrawork` · `/ulw` · `/init-deep` · `/refactor` · `/handoff` · `/start-work` · `/remove-ai-slops` · `/omomomo` |
+| **Slash commands** | `/ultrawork` · `/ulw` · `/init-deep` · `/refactor` · `/handoff` · `/start-work` · `/remove-ai-slops` · `/evalfly-enforce` · `/omomomo` |
 | **Skills** | Pantheon skills plus Seshat/SpecSafe skills: `bootstrap`, `coherence`, `docs`, `env-doctor`, `evaluation-flywheel`, `github`, `latest-docs`, `linear`, `push`, `specsafe`; opt-in `evalfly` templates/CLI provide deterministic evaluation evidence |
 | **Hooks** | Extension hooks: `todo-enforcer`, opt-in `evalfly-advisor`, `comment-checker`, `intent-gate`; agent hooks: `specsafe-session`, `specsafe-subagents`, `i-approve`, `fallback-audit` |
 | **Loop** | Ralph / ULW self-referential loop runtime (`/ralph-loop`, `/ulw-loop`, `/cancel-ralph`, `/stop-continuation`) |
@@ -39,7 +39,7 @@ skills/evalfly/          opt-in evaluation template and CLI
 hooks/*.ts              OMP lifecycle hooks from Seshat/SpecSafe
 extensions/oh-my-omp/   the loop runtime + lifecycle hooks (TS extension)
 test/                   integration and regression tests for Seshat/SpecSafe
-docs/                   port notes and migration context
+docs/                   port notes, migration context, and EvalFly user guides
 package.json            root test/typecheck runner for the integrated bundle
 install.sh              symlink/copy this bundle into ~/.omp/agent/
 ```

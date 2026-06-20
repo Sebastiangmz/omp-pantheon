@@ -271,7 +271,7 @@ function parseArgs(
 		else if (a === "--json") json = true;
 		else if (a === "--help" || a === "-h") {
 			// Treat help as invocation error so the caller can branch; tests don't hit this.
-			return { error: `help requested` };
+			return { error: "help requested" };
 		} else {
 			return { error: `unknown flag: ${a}` };
 		}

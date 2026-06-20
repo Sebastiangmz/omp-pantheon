@@ -159,7 +159,7 @@ function ensureLog0600(logPath: string): void {
 
 function appendLogEntry(logPath: string, entry: Record<string, unknown>): void {
 	ensureLog0600(logPath);
-	fs.appendFileSync(logPath, JSON.stringify(entry) + "\n");
+	fs.appendFileSync(logPath, `${JSON.stringify(entry)}\n`);
 }
 
 // ---------------------------------------------------------------------------
@@ -288,13 +288,13 @@ async function cmdList(
 	const COL_PRIORITY = 12;
 	const COL_DATE = 12;
 
-	const header =
+	const header = `${
 		"KEY".padEnd(COL_KEY) +
 		"STATE".padEnd(COL_STATE) +
 		"ASSIGNEE".padEnd(COL_ASSIGNEE) +
 		"PRIORITY".padEnd(COL_PRIORITY) +
-		"UPDATED".padEnd(COL_DATE) +
-		"TITLE";
+		"UPDATED".padEnd(COL_DATE)
+	}TITLE`;
 	const sep = "-".repeat(header.length + 20);
 
 	const lines = [header, sep];
@@ -349,8 +349,8 @@ async function cmdGet(
 		`url:         ${issue.url}`,
 		`created:     ${formatDate(issue.createdAt)}`,
 		`updated:     ${formatDate(issue.updatedAt)}`,
-		``,
-		`description:`,
+		"",
+		"description:",
 		issue.description ? issue.description : "(none)",
 	];
 
@@ -394,15 +394,15 @@ async function cmdComment(
 		const preview = [
 			"DRY-RUN — no changes will be made. Re-run with --i-approve to execute.",
 			"",
-			`action:      comment`,
+			"action:      comment",
 			`key:         ${key}  (internal id: ${issue.id})`,
 			`title:       ${issue.title}`,
 			`state:       ${state?.name ?? "—"}`,
-			``,
-			`mutation payload:`,
+			"",
+			"mutation payload:",
 			JSON.stringify({ createComment: payload }, null, 2),
-			``,
-			`diff (what would change):`,
+			"",
+			"diff (what would change):",
 			`  + comment on ${key}: "${body}"`,
 		];
 		return { stdout: preview.join("\n"), stderr: "", exit: 0 };
@@ -497,15 +497,15 @@ async function cmdTransition(
 		const preview = [
 			"DRY-RUN — no changes will be made. Re-run with --i-approve to execute.",
 			"",
-			`action:      transition`,
+			"action:      transition",
 			`key:         ${key}  (internal id: ${issue.id})`,
 			`title:       ${issue.title}`,
-			``,
-			`before → after:`,
+			"",
+			"before → after:",
 			`  state:     "${currentState?.name ?? "—"}" → "${targetState.name}"`,
 			`             (id: ${issue.stateId ?? "—"} → ${targetState.id})`,
-			``,
-			`mutation payload:`,
+			"",
+			"mutation payload:",
 			JSON.stringify({ updateIssue: { id: issue.id, ...payload } }, null, 2),
 		];
 		return { stdout: preview.join("\n"), stderr: "", exit: 0 };
@@ -573,12 +573,12 @@ async function cmdCreate(
 		const preview = [
 			"DRY-RUN — no changes will be made. Re-run with --i-approve to execute.",
 			"",
-			`action:      create`,
+			"action:      create",
 			`team:        ${teamId}`,
 			`title:       ${title}`,
 			body ? `body:        ${body}` : "body:        (none)",
-			``,
-			`mutation payload:`,
+			"",
+			"mutation payload:",
 			JSON.stringify({ createIssue: payload }, null, 2),
 		];
 		return { stdout: preview.join("\n"), stderr: "", exit: 0 };
@@ -806,7 +806,7 @@ if (import.meta.main) {
 			wrapLinearClient(new LinearClient({ apiKey })),
 	});
 
-	if (result.stdout) process.stdout.write(result.stdout + "\n");
-	if (result.stderr) process.stderr.write(result.stderr + "\n");
+	if (result.stdout) process.stdout.write(`${result.stdout}\n`);
+	if (result.stderr) process.stderr.write(`${result.stderr}\n`);
 	process.exit(result.exit);
 }

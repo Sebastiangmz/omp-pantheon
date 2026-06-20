@@ -100,7 +100,7 @@ function parseLinearList(stdout: string): Ticket[] {
 			const tokens = [...line.matchAll(/\S+/g)];
 			if (tokens.length >= 2 && tokens[0]?.[0] === "KEY") {
 				headerCols = tokens.map((m) => ({
-					name: m[0]!,
+					name: m[0] ?? "",
 					start: m.index ?? 0,
 				}));
 			}
@@ -109,13 +109,13 @@ function parseLinearList(stdout: string): Ticket[] {
 
 		const cols: Record<string, string> = {};
 		for (let i = 0; i < headerCols.length; i++) {
-			const start = headerCols[i]!.start;
+			const start = headerCols[i]?.start;
 			const end =
-				i + 1 < headerCols.length ? headerCols[i + 1]!.start : line.length;
-			cols[headerCols[i]!.name] = line.slice(start, end).trim();
+				i + 1 < headerCols.length ? headerCols[i + 1]?.start : line.length;
+			cols[headerCols[i]?.name] = line.slice(start, end).trim();
 		}
-		const key = cols["KEY"] ?? "";
-		const state = (cols["STATE"] ?? "").toLowerCase().replace(/\s+/g, "_");
+		const key = cols.KEY ?? "";
+		const state = (cols.STATE ?? "").toLowerCase().replace(/\s+/g, "_");
 		if (key && LINEAR_KEY_RE.test(key)) {
 			tickets.push({ key, state });
 		}
@@ -135,7 +135,7 @@ function parseLinearList(stdout: string): Ticket[] {
 function parseLinearGetState(stdout: string): string {
 	const m = stdout.match(/^state:\s*(.+)$/m);
 	if (!m) return "";
-	const noParen = m[1]!.replace(/\s*\([^)]*\)\s*$/, "").trim();
+	const noParen = m[1]?.replace(/\s*\([^)]*\)\s*$/, "").trim();
 	return noParen.toLowerCase().replace(/\s+/g, "_");
 }
 
@@ -146,7 +146,7 @@ function parseLinearGetState(stdout: string): string {
 function specKeyFromFilename(filename: string): string | null {
 	const base = filename.replace(/\.md$/, "");
 	const m = base.match(LINEAR_KEY_RE);
-	return m ? m[1]! : null;
+	return m?.[1] ?? null;
 }
 
 function listSpecKeys(repo: string): Set<string> {
@@ -268,13 +268,12 @@ function cmdTrailersVsLinear(repo: string, range: string): number {
 			const matches = [...body.matchAll(/^Spec-Slice:\s*(\S+)/gim)];
 			if (matches.length === 0) continue;
 			// Spec §4.7: take the LAST trailer.
-			const last = matches[matches.length - 1]![1]!;
+			const last = matches[matches.length - 1]?.[1];
+			if (!last) continue;
 			const m = last.match(LINEAR_KEY_RE);
-			if (m) trailerKeys.add(m[1]!);
-		} catch {
-			// Malformed body: skip rather than crash (spec edge case).
-			continue;
-		}
+			const key = m?.[1];
+			if (key) trailerKeys.add(key);
+		} catch {}
 	}
 
 	const drift: string[] = [];
@@ -332,7 +331,7 @@ function cmdBriefCoverage(repo: string): number {
 function parseRange(rest: string[]): string {
 	for (const arg of rest) {
 		const m = arg.match(/^--range=(.+)$/);
-		if (m) return m[1]!;
+		if (m?.[1]) return m[1];
 	}
 	return "HEAD~50..HEAD";
 }

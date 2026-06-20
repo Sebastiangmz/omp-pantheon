@@ -194,11 +194,11 @@ export function registerCommentChecker(pi: ExtensionAPI): void {
 		lastWarnedByFile.set(dedupKey, now);
 
 		const warning = [
-			`<system-reminder type="comment-checker">`,
+			'<system-reminder type="comment-checker">',
 			`Detected ${findings.length} potentially redundant/obvious comment${findings.length > 1 ? "s" : ""} in \`${filePath ?? "the edited file"}\`:`,
 			...findings.slice(0, 8).map((f) => `  • ${f.reason}: ${f.line}`),
-			`Remove comments that merely restate the code. Good comments explain *why*, not *what*.`,
-			`</system-reminder>`,
+			"Remove comments that merely restate the code. Good comments explain *why*, not *what*.",
+			"</system-reminder>",
 		].join("\n");
 
 		pi.logger.debug(

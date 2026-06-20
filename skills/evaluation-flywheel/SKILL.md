@@ -51,6 +51,9 @@ Run evals from the project root that owns the `evals/` directory. After installi
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts validate
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts run --suite smoke --commit-range main..HEAD
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts check --suite smoke --commit-range main..HEAD
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts enforce status
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts enforce start --suite smoke --commit-range main..HEAD
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts enforce stop
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts latest
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts list
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts summary
@@ -67,6 +70,7 @@ When developing this bundle itself, the repo-local `skills/evalfly/bin/evalfly.t
 Use `validate` before `run`. Treat `evals/reports/<run-id>.md` as the human-readable evidence artifact and `evals/runs/<run-id>.json` as the machine-readable record. Cite the report path, run id, suite, verdict, critical regression count, SpecSafe slice id, session id, and commit range when present.
 
 Use `check --suite smoke --commit-range <range>` when you want an explicit local gate command. It runs the same deterministic suite, writes the same evidence, prints the report path, and exits nonzero on a failing verdict. Do not present `check` as ambient enforcement: it only gates a workflow that explicitly calls it.
+Use `enforce start --suite smoke --commit-range <range>` only when local EvalFly evidence should become mandatory before OMP completion. Enforced mode writes `.pi/evalfly/enforcement.json`; the local `session_stop` gate then requires the latest valid EvalFly run to match the enforced suite and commit range, pass, have zero critical regressions, and point at its canonical report. Use `enforce stop` to return to advisory mode.
 
 Use `latest` when a handoff or review needs the newest saved EvalFly evidence path. It validates saved run records before printing the latest run id, verdict, suite, and report path.
 
@@ -85,7 +89,7 @@ Use `normalize-trace <raw-relative-path> <sanitized-name>` when a raw JSONL trac
 Use `import-session-trace <raw-relative-path> <sanitized-name>` when a local session JSON object already separates sanitized message/tool evidence from raw payloads. It imports `messages[]` and `tool_calls[]` into `evalfly.trace.v1`, preserves safe `trace_id`, `session_id`, `slice_id`, agent/model/tool/cost/latency/verdict metadata, and drops raw `input`, `output`, and `content`. It is still a guardrail, not a privacy proof.
 
 If a SpecSafe slice is open in `.pi/.specsafe-state.json`, `evalfly run` and `evalfly check` copy `currentSlice.id` and `currentSlice.sessionId` into the run/report by reference. Pass `--commit-range <range>` when the report should identify the reviewed commit span. Evalfly does not mutate `.pi/.specsafe-state.json`.
-Do not claim runtime enforcement. Evalfly reports evidence; it does not block commits, hooks, CI, or merges unless a project explicitly invokes `check` in its own workflow or deliberately copies the required-gate template and protects that check.
+Do not claim ambient enforcement. Evalfly reports evidence by default; local runtime enforcement exists only after `evalfly enforce start --suite smoke --commit-range <range>` activates `.pi/evalfly/enforcement.json`, and CI/merge enforcement exists only after a project explicitly invokes `check` in its own workflow or deliberately copies the required-gate template and protects that check.
 
 ## Trace curation and privacy
 
@@ -137,17 +141,17 @@ The bundled GitHub Actions example at `skills/evalfly/templates/github-actions/e
 
 ## Current limits
 
-The contract MVP intentionally provides evidence tooling only:
+EvalFly remains opt-in and local by default:
 
-- No global hook enforcement. The optional `evalfly-advisor` hook is reminder-only and opt-in.
+- Local enforcement exists only after explicit `evalfly enforce start`; no project is forced into enforced mode globally.
 - No installed mandatory CI gate. The optional advisory workflow stays non-blocking, and the optional required-gate template only blocks after a project copies it and configures branch protection.
 - No required LLM-as-judge. LLM judge metadata is experimental/advisory and not executed by Evalfly.
-- No automatic raw trace capture.
+- No automatic raw trace capture. Enforced mode captures only sanitized in-memory metadata and drops raw `input`, `output`, and `content`.
 - No mutation of existing project state during bootstrap.
 - No external-memory dependency.
 - No new eval-designer, judge, or trace-curator agents.
 
-Keep changes boring: schemas, CLI usage, templates, deterministic smoke cases, and public documentation that says the flywheel is opt-in.
+Keep changes boring: schemas, CLI usage, templates, deterministic smoke cases, explicit local enforcement, and public documentation that says the flywheel is opt-in.
 
 ## Minimal eval project shape
 

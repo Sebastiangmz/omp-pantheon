@@ -16,16 +16,16 @@ import * as path from "node:path";
 import TurndownService from "turndown";
 
 import {
+	type FetchFn,
+	type FetchResponse,
+	type HtmlToMarkdown,
+	type Registry,
 	dispatch,
 	extractSection,
 	loadRegistry,
 	parseFrontmatter,
 	sanitizeLib,
 	scopeHtml,
-	type FetchFn,
-	type FetchResponse,
-	type HtmlToMarkdown,
-	type Registry,
 } from "../bin/latest-docs.ts";
 
 // ---------------------------------------------------------------------------
@@ -70,7 +70,8 @@ function mkEnv(registry?: Registry): TestEnv {
 
 afterEach(() => {
 	while (envs.length) {
-		const e = envs.pop()!;
+		const e = envs.pop();
+		if (!e) continue;
 		try {
 			fs.rmSync(e.tmpDir, { recursive: true, force: true });
 		} catch {}
@@ -168,7 +169,8 @@ describe("parseFrontmatter", () => {
 });
 
 describe("extractSection", () => {
-	const doc = `# Title\n\nintro text\n\n## Installation\n\nrun npm install\n\n### sub\n\ndetail\n\n## Usage\n\nexample code\n`;
+	const doc =
+		"# Title\n\nintro text\n\n## Installation\n\nrun npm install\n\n### sub\n\ndetail\n\n## Usage\n\nexample code\n";
 
 	test("returns the named section + its subtree, stops at same or higher level", () => {
 		const got = extractSection(doc, "Installation");
@@ -300,9 +302,12 @@ describe("fetch", () => {
 			path.join(env.cwd, ".pi", ".docs-cache", "hono"),
 		);
 		expect(files.length).toBe(1);
+		const file = files[0];
+		expect(file).toBeDefined();
+		if (!file) throw new Error("expected cache file");
 		expect(
 			fs.readFileSync(
-				path.join(env.cwd, ".pi", ".docs-cache", "hono", files[0]!),
+				path.join(env.cwd, ".pi", ".docs-cache", "hono", file),
 				"utf8",
 			),
 		).toContain("converted: keep me");
@@ -635,8 +640,11 @@ describe("turndown integration (real HTML→MD, no network)", () => {
 			path.join(env.cwd, ".pi", ".docs-cache", "hono"),
 		);
 		expect(files.length).toBe(1);
+		const file = files[0];
+		expect(file).toBeDefined();
+		if (!file) throw new Error("expected cache file");
 		const content = fs.readFileSync(
-			path.join(env.cwd, ".pi", ".docs-cache", "hono", files[0]!),
+			path.join(env.cwd, ".pi", ".docs-cache", "hono", file),
 			"utf8",
 		);
 		expect(content).toContain("# Title"); // atx heading style

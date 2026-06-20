@@ -35,14 +35,15 @@ oh-my-openagent-inspired Pantheon layer, then folds in the local Seshat stack so
   enforcement, intent gate, comment checker, `i-approve`, fallback audit, and
   SpecSafe subagent/session hooks.
 - **Opt-in evaluation flywheel**: `evaluation-flywheel` guidance plus the
-  `evalfly` template/CLI for deterministic smoke evidence and sanitized report
-  artifacts; no hook or CI enforcement is claimed.
+  `evalfly` template/CLI for deterministic smoke evidence, sanitized report
+  artifacts, and explicit local enforcement when `evalfly enforce start` is used;
+  CI enforcement remains opt-in template/configuration only.
 
 ## Commands in the bundle
 
 `/ulw`, `/ultrawork`, `/init-deep`, `/refactor`, `/handoff`, `/start-work`,
-`/remove-ai-slops`, `/omomomo`, plus extension commands `/ralph-loop`,
-`/ulw-loop`, `/cancel-ralph`, and `/stop-continuation`.
+`/remove-ai-slops`, `/evalfly-enforce`, `/omomomo`, plus extension commands
+`/ralph-loop`, `/ulw-loop`, `/cancel-ralph`, and `/stop-continuation`.
 
 ## Who made this lineage?
 

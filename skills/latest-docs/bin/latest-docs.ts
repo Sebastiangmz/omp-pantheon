@@ -99,7 +99,7 @@ export function loadRegistry(cwd: string): Registry {
 function saveRegistry(cwd: string, registry: Registry): void {
 	const p = registryPath(cwd);
 	fs.mkdirSync(path.dirname(p), { recursive: true });
-	fs.writeFileSync(p, JSON.stringify(registry, null, 2) + "\n", {
+	fs.writeFileSync(p, `${JSON.stringify(registry, null, 2)}\n`, {
 		mode: 0o600,
 	});
 	fs.chmodSync(p, 0o600); // belt-and-braces when file pre-existed
@@ -155,7 +155,7 @@ function listCacheFiles(cwd: string, lib: string): string[] {
 function mostRecentCacheFile(cwd: string, lib: string): string | null {
 	const files = listCacheFiles(cwd, lib);
 	if (files.length === 0) return null;
-	return path.join(cacheDir(cwd, lib), files[files.length - 1]!);
+	return path.join(cacheDir(cwd, lib), files[files.length - 1] ?? "");
 }
 
 // ---------------------------------------------------------------------------
@@ -212,7 +212,7 @@ export function parseFrontmatter(content: string): {
 		const m = line.match(/^([a-z_]+):\s*(.+)$/);
 		if (!m) continue;
 		const key = m[1] as keyof Frontmatter;
-		(fm as Record<string, string>)[key] = m[2]!.trim();
+		(fm as Record<string, string>)[key] = m[2]?.trim();
 	}
 	if (!fm.source_url || !fm.fetched_at || !fm.content_hash) {
 		return { frontmatter: null, body: content };
@@ -276,21 +276,21 @@ export function extractSection(body: string, needle: string): string | null {
 	let startIdx = -1;
 	let startLevel = 0;
 	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i]!;
+		const line = lines[i] ?? "";
 		const h = line.match(/^(#+)\s+(.+?)\s*$/);
 		if (!h) continue;
-		if (h[2]!.toLowerCase().includes(needleLower)) {
+		if (h[2]?.toLowerCase().includes(needleLower)) {
 			startIdx = i;
-			startLevel = h[1]!.length;
+			startLevel = h[1]?.length;
 			break;
 		}
 	}
 	if (startIdx < 0) return null;
-	const out = [lines[startIdx]!];
+	const out = [lines[startIdx] ?? ""];
 	for (let i = startIdx + 1; i < lines.length; i++) {
-		const line = lines[i]!;
+		const line = lines[i] ?? "";
 		const h = line.match(/^(#+)\s+/);
-		if (h && h[1]!.length <= startLevel) break;
+		if (h && h[1]?.length <= startLevel) break;
 		out.push(line);
 	}
 	return out.join("\n");
@@ -331,7 +331,7 @@ async function cmdList(
 			`${lib.padEnd(30)} ${entry.type.padEnd(8)}  ${lastFetched.padEnd(14)}  ${entry.url}`,
 		);
 	}
-	return { stdout: lines.join("\n") + "\n", stderr: "", exit: 0 };
+	return { stdout: `${lines.join("\n")}\n`, stderr: "", exit: 0 };
 }
 
 async function cmdFetch(
@@ -465,7 +465,7 @@ async function cmdShow(
 				exit: 1,
 			};
 		}
-		return { stdout: header + section + "\n", stderr: "", exit: 0 };
+		return { stdout: `${header + section}\n`, stderr: "", exit: 0 };
 	}
 
 	return { stdout: header + body, stderr: "", exit: 0 };
@@ -507,7 +507,7 @@ async function cmdRegister(
 		} else if (arg.startsWith("--selector="))
 			selector = arg.slice("--selector=".length);
 		else if (arg.startsWith("--ttl-days="))
-			ttlDays = parseInt(arg.slice("--ttl-days=".length), 10);
+			ttlDays = Number.parseInt(arg.slice("--ttl-days=".length), 10);
 	}
 
 	const entry: RegistryEntry = { url, type, verified: false };
@@ -517,14 +517,7 @@ async function cmdRegister(
 
 	if (!approve) {
 		return {
-			stdout:
-				`DRAFT — would register:\n` +
-				`  ${lib}\n` +
-				`  url:      ${entry.url}\n` +
-				`  type:     ${entry.type}\n` +
-				`  selector: ${entry.selector ?? "(none)"}\n` +
-				`  ttl_days: ${entry.ttl_days ?? "(default)"}\n\n` +
-				`Rerun with --i-approve to write to registry.\n`,
+			stdout: `DRAFT — would register:\n  ${lib}\n  url:      ${entry.url}\n  type:     ${entry.type}\n  selector: ${entry.selector ?? "(none)"}\n  ttl_days: ${entry.ttl_days ?? "(default)"}\n\nRerun with --i-approve to write to registry.\n`,
 			stderr: "",
 			exit: 0,
 		};
@@ -548,7 +541,7 @@ async function cmdRegister(
 		after: entry,
 		approver: "luci",
 	};
-	fs.appendFileSync(logFile, JSON.stringify(logEntry) + "\n");
+	fs.appendFileSync(logFile, `${JSON.stringify(logEntry)}\n`);
 	fs.chmodSync(logFile, 0o600);
 
 	return {
@@ -681,6 +674,6 @@ if (import.meta.main) {
 	});
 
 	if (result.stdout) process.stdout.write(result.stdout);
-	if (result.stderr) process.stderr.write(result.stderr + "\n");
+	if (result.stderr) process.stderr.write(`${result.stderr}\n`);
 	process.exit(result.exit);
 }

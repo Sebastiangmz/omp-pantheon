@@ -118,7 +118,7 @@ export default function (pi: HookAPI): void {
 	pi.on("session_start", async (_event, ctx) => {
 		const state = readStateFileOrNull(statePathFor(ctx.cwd));
 		const slice = state?.currentSlice;
-		if (slice && ctx.hasUI) {
+		if (slice && ctx.hasUI && ctx.ui) {
 			ctx.ui.setStatus("specsafe", `slice:${slice.id}`);
 		}
 	});
@@ -150,7 +150,7 @@ export default function (pi: HookAPI): void {
 			emittedAt: new Date().toISOString(),
 		});
 
-		if (ctx.hasUI) {
+		if (ctx.hasUI && ctx.ui) {
 			ctx.ui.notify(
 				`SpecSafe slice ${slice.id} still open at shutdown`,
 				"warning",

@@ -1,6 +1,6 @@
 import { appendFile, mkdir } from "node:fs/promises";
-import { dirname, join } from "node:path";
 import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import type { HookAPI } from "./types";
 
 const LOG_PATH = join(homedir(), ".omp", "agent", ".fallback-log.jsonl");

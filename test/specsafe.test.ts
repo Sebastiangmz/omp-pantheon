@@ -15,13 +15,13 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { commitSubagentWork } from "../hooks/specsafe-subagents";
 import {
+	type StateFile,
 	buildTrailerBlock,
 	readStateFileOrNull,
 	statePathFor,
-	type StateFile,
 } from "../hooks/specsafe-session";
+import { commitSubagentWork } from "../hooks/specsafe-subagents";
 
 // ---------------------------------------------------------------------------
 // helpers (mirror .pi test helpers)

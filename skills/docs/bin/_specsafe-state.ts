@@ -72,10 +72,8 @@ export function readStateFileOrNull(filePath: string): StateFile | null {
 	try {
 		const raw = fs.readFileSync(filePath, "utf-8");
 		const parsed = JSON.parse(raw) as StateFile;
-		if (
-			!("currentSlice" in parsed) ||
-			!Array.isArray((parsed as any).history)
-		) {
+		const maybeState = parsed as { history?: unknown };
+		if (!("currentSlice" in parsed) || !Array.isArray(maybeState.history)) {
 			throw new Error("missing required fields");
 		}
 		return parsed;

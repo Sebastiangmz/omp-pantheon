@@ -14,7 +14,7 @@
  */
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 
-import { LoopRuntime, type StartLoopArgs } from "./runtime";
+import type { LoopRuntime, StartLoopArgs } from "./runtime";
 
 interface ParsedArgs {
 	task: string;
@@ -37,7 +37,9 @@ function parseLoopArgs(raw: string): ParsedArgs {
 	const tokens: string[] = [];
 	const re = /"([^"]*)"|(\S+)/g;
 	let m: RegExpExecArray | null;
-	while ((m = re.exec(trimmed)) !== null) {
+	while (true) {
+		m = re.exec(trimmed);
+		if (m === null) break;
 		tokens.push(m[1] ?? m[2]);
 	}
 
@@ -74,23 +76,23 @@ function buildKickoffPrompt(
 	args: StartLoopArgs,
 ): string {
 	const lines: string[] = [];
-	lines.push(`<command-instruction>`);
+	lines.push("<command-instruction>");
 	lines.push(
 		`You are starting a ${loopType} Loop — a self-referential development loop that runs until task completion.`,
 	);
-	lines.push(``);
-	lines.push(`## How the loop works`);
-	lines.push(``);
-	lines.push(`1. You will work on the task continuously.`);
+	lines.push("");
+	lines.push("## How the loop works");
+	lines.push("");
+	lines.push("1. You will work on the task continuously.");
 	if (loopType === "ULTRAWORK") {
 		lines.push(
 			`2. When you believe the work is complete, output: \`<promise>${args.completionPromise}</promise>\``,
 		);
 		lines.push(
-			`3. That does NOT finish the loop yet. The system will require Oracle verification.`,
+			"3. That does NOT finish the loop yet. The system will require Oracle verification.",
 		);
 		lines.push(
-			`4. The loop only ends after the system confirms Oracle verified the result.`,
+			"4. The loop only ends after the system confirms Oracle verified the result.",
 		);
 		lines.push(`5. Maximum iterations: ${args.maxIterations ?? 500}.`);
 	} else {
@@ -98,50 +100,50 @@ function buildKickoffPrompt(
 			`2. When you believe the task is FULLY complete, output: \`<promise>${args.completionPromise}</promise>\``,
 		);
 		lines.push(
-			`3. If you don't output the promise, the loop will automatically inject another prompt to continue.`,
+			"3. If you don't output the promise, the loop will automatically inject another prompt to continue.",
 		);
 		lines.push(`4. Maximum iterations: ${args.maxIterations ?? 100}.`);
 	}
-	lines.push(``);
-	lines.push(`## Rules`);
-	lines.push(``);
-	lines.push(`- Focus on completing the task fully, not partially.`);
+	lines.push("");
+	lines.push("## Rules");
+	lines.push("");
+	lines.push("- Focus on completing the task fully, not partially.");
 	lines.push(
-		`- Do not output the completion promise until the task is truly done.`,
+		"- Do not output the completion promise until the task is truly done.",
 	);
 	lines.push(
-		`- Each iteration should make meaningful progress toward the goal.`,
+		"- Each iteration should make meaningful progress toward the goal.",
 	);
-	lines.push(`- If stuck, try different approaches.`);
-	lines.push(`- Use todos to track your progress.`);
+	lines.push("- If stuck, try different approaches.");
+	lines.push("- Use todos to track your progress.");
 	if (loopType === "ULTRAWORK") {
 		lines.push(
-			`- After you emit the completion promise, run Oracle verification when instructed.`,
+			"- After you emit the completion promise, run Oracle verification when instructed.",
 		);
 		lines.push(
-			`- Do not treat the promise as final completion until Oracle verifies it.`,
+			"- Do not treat the promise as final completion until Oracle verifies it.",
 		);
 	}
-	lines.push(``);
-	lines.push(`## Exit conditions`);
-	lines.push(``);
+	lines.push("");
+	lines.push("## Exit conditions");
+	lines.push("");
 	if (loopType === "ULTRAWORK") {
 		lines.push(
-			`1. **Verified completion**: Oracle verifies the result and the system confirms it.`,
+			"1. **Verified completion**: Oracle verifies the result and the system confirms it.",
 		);
-		lines.push(`2. **Cancel**: User runs \`/cancel-ralph\`.`);
+		lines.push("2. **Cancel**: User runs `/cancel-ralph`.");
 	} else {
 		lines.push(
-			`1. **Completion**: Output your completion promise tag when fully complete.`,
+			"1. **Completion**: Output your completion promise tag when fully complete.",
 		);
-		lines.push(`2. **Max iterations**: Loop stops automatically at limit.`);
-		lines.push(`3. **Cancel**: User runs \`/cancel-ralph\`.`);
+		lines.push("2. **Max iterations**: Loop stops automatically at limit.");
+		lines.push("3. **Cancel**: User runs `/cancel-ralph`.");
 	}
-	lines.push(`</command-instruction>`);
-	lines.push(``);
-	lines.push(`<user-task>`);
+	lines.push("</command-instruction>");
+	lines.push("");
+	lines.push("<user-task>");
 	lines.push(args.task);
-	lines.push(`</user-task>`);
+	lines.push("</user-task>");
 	return lines.join("\n");
 }
 

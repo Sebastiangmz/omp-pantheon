@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
 	access,
 	lstat,
@@ -5,10 +6,16 @@ import {
 	readFile,
 	readdir,
 	realpath,
+	rename,
+	rm,
 	writeFile,
 } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
+import {
+	readEvalFlyEnforcementState,
+	writeEvalFlyEnforcementState,
+} from "./enforcement-state.ts";
 import {
 	EVAL_RUN_SCHEMA_VERSION,
 	type EvalCase,
@@ -34,7 +41,7 @@ const UNSANITIZED_TRACE_PATTERNS = [
 ] as const;
 
 const USAGE =
-	"Usage: evalfly validate | run --suite smoke | check --suite smoke | latest | list | summary | traces | audit-traces | compare <baseline-run-id> <after-run-id> | report <run-id> | curate-trace <raw-relative-path> <sanitized-name> | normalize-trace <raw-relative-path> <sanitized-name> | import-session-trace <raw-relative-path> <sanitized-name>";
+	"Usage: evalfly validate | run --suite smoke | check --suite smoke | enforce status|start|stop|explain | latest | list | summary | traces | audit-traces | compare <baseline-run-id> <after-run-id> | report <run-id> | curate-trace <raw-relative-path> <sanitized-name> | normalize-trace <raw-relative-path> <sanitized-name> | import-session-trace <raw-relative-path> <sanitized-name>";
 
 export type DispatchOptions = {
 	cwd?: string;
@@ -81,6 +88,9 @@ export async function dispatch(
 		}
 		if (command === "check") {
 			return await checkCommand(args.slice(1), cwd, opts);
+		}
+		if (command === "enforce") {
+			return enforceCommand(args.slice(1), cwd, opts);
 		}
 		if (command === "latest") {
 			return await latestCommand(cwd);
@@ -152,6 +162,101 @@ async function checkCommand(
 	};
 }
 
+function enforceCommand(
+	args: string[],
+	cwd: string,
+	opts: DispatchOptions,
+): DispatchResult {
+	const subcommand = args[0];
+	if (!subcommand) {
+		return {
+			exitCode: 1,
+			stdout: "",
+			stderr: `missing evalfly enforce subcommand\n${ENFORCE_USAGE}\n`,
+		};
+	}
+
+	if (subcommand === "status") {
+		return {
+			exitCode: 0,
+			stdout: renderEnforcementStatus(cwd),
+			stderr: "",
+		};
+	}
+
+	if (subcommand === "start") {
+		const suite = parseEnforcementSuite(args.slice(1));
+		const commitRange = parseOptionalFlag(args.slice(1), "--commit-range");
+		if (!commitRange) {
+			throw new Error(
+				"evalfly enforce start requires --commit-range main..HEAD",
+			);
+		}
+		writeEvalFlyEnforcementState(cwd, {
+			mode: "enforced",
+			suite,
+			commitRange,
+			activatedAt: (opts.now ?? (() => new Date()))().toISOString(),
+			activatedBy: "evalfly enforce start",
+		});
+		return {
+			exitCode: 0,
+			stdout: renderEnforcementStatus(cwd),
+			stderr: "",
+		};
+	}
+
+	if (subcommand === "stop") {
+		writeEvalFlyEnforcementState(cwd, { mode: "advisory" });
+		return {
+			exitCode: 0,
+			stdout: renderEnforcementStatus(cwd),
+			stderr: "",
+		};
+	}
+
+	if (subcommand === "explain") {
+		return {
+			exitCode: 0,
+			stdout:
+				"EvalFly enforcement is explicit opt-in local state. EvalFly remains advisory until `evalfly enforce start --suite smoke --commit-range main..HEAD` writes .pi/evalfly/enforcement.json; `evalfly enforce stop` returns the project to advisory mode.\n",
+			stderr: "",
+		};
+	}
+
+	return {
+		exitCode: 1,
+		stdout: "",
+		stderr: `unknown evalfly enforce subcommand: ${subcommand}\n${ENFORCE_USAGE}\n`,
+	};
+}
+
+const ENFORCE_USAGE =
+	"Usage: evalfly enforce status | evalfly enforce start --suite smoke --commit-range main..HEAD | evalfly enforce stop | evalfly enforce explain";
+
+function renderEnforcementStatus(cwd: string): string {
+	const state = readEvalFlyEnforcementState(cwd);
+	if (state.mode === "advisory") {
+		return "EvalFly enforcement: advisory\nEvalFly is not blocking by default; run `evalfly enforce start --suite smoke --commit-range main..HEAD` to opt in.\n";
+	}
+
+	return [
+		"EvalFly enforcement: enforced",
+		`suite: ${state.suite ?? "(none)"}`,
+		`commit range: ${state.commitRange ?? "(none)"}`,
+		`activated at: ${state.activatedAt ?? "(unknown)"}`,
+		"",
+	].join("\n");
+}
+
+function parseEnforcementSuite(args: string[]): "smoke" {
+	const suite = parseOptionalFlag(args, "--suite");
+	if (suite !== "smoke") {
+		throw new Error("evalfly enforce start requires --suite smoke");
+	}
+	return suite;
+}
+
 async function executeRun(
 	args: string[],
 	cwd: string,
@@ -193,7 +298,7 @@ async function executeRun(
 	};
 
 	await writeRun(cwd, run);
-	await writeReport(cwd, run);
+	await writeReport(cwd, run, { overwrite: false });
 	return run;
 }
 
@@ -206,7 +311,13 @@ async function reportCommand(
 		return { exitCode: 1, stdout: "", stderr: "report requires a run id\n" };
 	}
 	assertSafeRunId(runId);
-	const runPath = await artifactPath(cwd, ["evals", "runs"], runId, ".json");
+	const runPath = await exactArtifactFilePath(
+		cwd,
+		["evals", "runs"],
+		runId,
+		".json",
+		"run",
+	);
 	const parsed = JSON.parse(await readFile(runPath, "utf8"));
 	const result = validateEvalRun(parsed);
 	if (!result.ok) {
@@ -220,7 +331,7 @@ async function reportCommand(
 			`run_id mismatch: requested ${runId} but saved run is ${result.value.run_id}`,
 		);
 	}
-	await writeReport(cwd, result.value);
+	await writeReport(cwd, result.value, { overwrite: true });
 	return {
 		exitCode: 0,
 		stdout: `evalfly report written: ${join("evals", "reports", `${runId}.md`)}\n`,
@@ -235,7 +346,11 @@ async function compareCommand(
 	if (args.length !== 2) {
 		throw new Error("compare requires <baseline-run-id> <after-run-id>");
 	}
-	const [baselineRunId, afterRunId] = args;
+	const baselineRunId = args[0];
+	const afterRunId = args[1];
+	if (!baselineRunId || !afterRunId) {
+		throw new Error("compare requires <baseline-run-id> <after-run-id>");
+	}
 	assertSafeRunId(baselineRunId);
 	assertSafeRunId(afterRunId);
 	const runs = await readSavedRuns(cwd);
@@ -527,6 +642,19 @@ function findRawTraceFields(value: unknown, path: string[]): string[] {
 	return fields;
 }
 
+function assertNoRawTraceFields(content: string): void {
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(content);
+	} catch {
+		throw new Error("trace must be valid JSON");
+	}
+	const fields = findRawTraceFields(parsed, []);
+	if (fields.length > 0) {
+		throw new Error(`trace contains raw fields: ${fields.join(", ")}`);
+	}
+}
+
 async function readSavedRuns(cwd: string): Promise<EvalRun[]> {
 	const runsDir = await readExactArtifactDir(cwd, ["evals", "runs"]);
 	if (!runsDir) {
@@ -611,6 +739,7 @@ async function curateTraceCommand(
 	);
 	const content = await readFile(rawTracePath, "utf8");
 	assertSanitizedTrace(content);
+	assertNoRawTraceFields(content);
 	const targetDir = await ensureSanitizedTraceDir(cwd);
 	const targetPath = resolve(targetDir, sanitizedName);
 	if (
@@ -973,11 +1102,16 @@ function formatValidationErrors(config: unknown, errors: string[]): string[] {
 		if (!match) {
 			return error;
 		}
-		const testCase = cases[Number(match[1])];
+		const index = Number(match[1]);
+		const field = match[2];
+		if (!field) {
+			return error;
+		}
+		const testCase = cases[index];
 		if (typeof testCase !== "object" || testCase === null) {
 			return error;
 		}
-		const received = (testCase as Record<string, unknown>)[match[2]];
+		const received = (testCase as Record<string, unknown>)[field];
 		return typeof received === "string"
 			? `${error} (received: ${received})`
 			: error;
@@ -1006,10 +1140,13 @@ function parseOptionalFlag(args: string[], flag: string): string | undefined {
 	return value;
 }
 function assertContextLine(label: string, value: string): void {
-	if (
-		value.length > CONTEXT_VALUE_MAX_LENGTH ||
-		/[\u0000-\u001f\u007f]/.test(value)
-	) {
+	for (const char of value) {
+		const code = char.charCodeAt(0);
+		if (code < 32 || code === 127) {
+			throw new Error(`${label} must be a single line`);
+		}
+	}
+	if (value.length > CONTEXT_VALUE_MAX_LENGTH) {
 		throw new Error(`${label} must be a single line`);
 	}
 }
@@ -1185,18 +1322,108 @@ function missingPathError(error: unknown): boolean {
 
 async function writeRun(cwd: string, run: RunRecord): Promise<void> {
 	await ensureArtifactDir(cwd, ["evals", "runs"]);
-	await writeFile(
-		await artifactPath(cwd, ["evals", "runs"], run.run_id, ".json"),
+	await writeNewArtifactFile(
+		cwd,
+		["evals", "runs"],
+		run.run_id,
+		".json",
 		`${JSON.stringify(run, null, 2)}\n`,
+		"run",
 	);
 }
 
-async function writeReport(cwd: string, run: RunRecord): Promise<void> {
+async function writeReport(
+	cwd: string,
+	run: RunRecord,
+	options: { overwrite: boolean },
+): Promise<void> {
 	await ensureArtifactDir(cwd, ["evals", "reports"]);
-	await writeFile(
-		await artifactPath(cwd, ["evals", "reports"], run.run_id, ".md"),
-		renderReport(run),
+	const content = renderReport(run);
+	if (options.overwrite) {
+		await replaceArtifactFile(
+			cwd,
+			["evals", "reports"],
+			run.run_id,
+			".md",
+			content,
+			"report",
+		);
+		return;
+	}
+	await writeNewArtifactFile(
+		cwd,
+		["evals", "reports"],
+		run.run_id,
+		".md",
+		content,
+		"report",
 	);
+}
+
+async function writeNewArtifactFile(
+	cwd: string,
+	artifactDirParts: [string, string],
+	runId: string,
+	extension: ".json" | ".md",
+	content: string,
+	label: "run" | "report",
+): Promise<void> {
+	const targetPath = await artifactPath(
+		cwd,
+		artifactDirParts,
+		runId,
+		extension,
+	);
+	try {
+		await lstat(targetPath);
+		throw new Error(
+			`${label} artifact already exists: ${join(...artifactDirParts, `${runId}${extension}`)}`,
+		);
+	} catch (error) {
+		if (!missingPathError(error)) {
+			throw error;
+		}
+	}
+	await writeFile(targetPath, content, { flag: "wx", mode: 0o600 });
+}
+
+async function replaceArtifactFile(
+	cwd: string,
+	artifactDirParts: [string, string],
+	runId: string,
+	extension: ".json" | ".md",
+	content: string,
+	label: "run" | "report",
+): Promise<void> {
+	const targetPath = await artifactPath(
+		cwd,
+		artifactDirParts,
+		runId,
+		extension,
+	);
+	const relativeTargetPath = join(...artifactDirParts, `${runId}${extension}`);
+	try {
+		const stat = await lstat(targetPath);
+		if (!stat.isFile() || stat.isSymbolicLink()) {
+			throw new Error(`unsafe ${label} artifact: ${relativeTargetPath}`);
+		}
+		const realTargetPath = await realpath(targetPath);
+		if (realTargetPath !== targetPath) {
+			throw new Error(`unsafe ${label} artifact: ${relativeTargetPath}`);
+		}
+	} catch (error) {
+		if (!missingPathError(error)) {
+			throw error;
+		}
+	}
+	const tempPath = `${targetPath}.${randomUUID()}.tmp`;
+	try {
+		await writeFile(tempPath, content, { flag: "wx", mode: 0o600 });
+		await rename(tempPath, targetPath);
+	} catch (error) {
+		await rm(tempPath, { force: true });
+		throw error;
+	}
 }
 
 function renderReport(run: RunRecord): string {

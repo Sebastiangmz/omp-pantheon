@@ -296,7 +296,7 @@ function applyMode(
 		}
 		let content = existing;
 		if (content.length > 0 && !content.endsWith("\n")) content += "\n";
-		content += plan.gitignoreMissing.join("\n") + "\n";
+		content += `${plan.gitignoreMissing.join("\n")}\n`;
 		fs.writeFileSync(giPath, content);
 		out.write(
 			`updated .gitignore (${plan.gitignoreMissing.length} patterns)\n`,
@@ -307,15 +307,14 @@ function applyMode(
 	// (f) audit log — always append on apply
 	const logPath = path.join(cwd, ".pi", ".bootstrap-log.jsonl");
 	fs.mkdirSync(path.dirname(logPath), { recursive: true });
-	const entry =
-		JSON.stringify({
-			ts: new Date().toISOString(),
-			action: "bootstrap",
-			cwd,
-			piSeshatRoot: PI_SESHAT_ROOT,
-			applied: applied.length > 0 ? applied : ["audit-log-only"],
-			approver: "luci",
-		}) + "\n";
+	const entry = `${JSON.stringify({
+		ts: new Date().toISOString(),
+		action: "bootstrap",
+		cwd,
+		piSeshatRoot: PI_SESHAT_ROOT,
+		applied: applied.length > 0 ? applied : ["audit-log-only"],
+		approver: "luci",
+	})}\n`;
 	if (!fs.existsSync(logPath)) {
 		fs.writeFileSync(logPath, entry, { mode: 0o600 });
 	} else {

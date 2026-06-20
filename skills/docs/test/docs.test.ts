@@ -239,7 +239,8 @@ describe("[unit] AC11 — scope validation", () => {
 	});
 
 	test("specs/briefs/CUR-92.md is accepted", async () => {
-		const diff = `--- a/specs/briefs/CUR-92.md\n+++ b/specs/briefs/CUR-92.md\n@@ -1,2 +1,3 @@\n # Brief\n+Added.\n End.\n`;
+		const diff =
+			"--- a/specs/briefs/CUR-92.md\n+++ b/specs/briefs/CUR-92.md\n@@ -1,2 +1,3 @@\n # Brief\n+Added.\n End.\n";
 		const opts = makeBaseOpts(tmpDir, { stdin: makeStdin(diff) });
 		const result = await dispatch(
 			["propose", "specs/briefs/CUR-92.md", "--rationale=test"],
@@ -351,7 +352,10 @@ describe("[unit] AC8 — propose creates .patch file", () => {
 		const drafts = listDraftFiles(tmpDir);
 		expect(drafts).toHaveLength(1);
 
-		const draftPath = path.join(getDraftsDir(tmpDir), drafts[0]!);
+		const draft = drafts[0];
+		expect(draft).toBeDefined();
+		if (!draft) throw new Error("expected draft file");
+		const draftPath = path.join(getDraftsDir(tmpDir), draft);
 		expect(fs.existsSync(draftPath)).toBe(true);
 
 		// Check mode 0600
@@ -388,7 +392,8 @@ describe("[unit] AC8 — propose creates .patch file", () => {
 	});
 
 	test("slug sanitized from path basename", async () => {
-		const diff = `--- a/specs/briefs/CUR-92.md\n+++ b/specs/briefs/CUR-92.md\n@@ -1,2 +1,3 @@\n # Brief\n+Added.\n End.\n`;
+		const diff =
+			"--- a/specs/briefs/CUR-92.md\n+++ b/specs/briefs/CUR-92.md\n@@ -1,2 +1,3 @@\n # Brief\n+Added.\n End.\n";
 		const opts = makeBaseOpts(tmpDir, {
 			stdin: makeStdin(diff),
 			now: () => new Date("2026-04-24T14:02:11Z"),
@@ -431,7 +436,7 @@ describe("[unit] docs list", () => {
 
 		const drafts = listDraftFiles(tmpDir);
 		expect(drafts).toHaveLength(1);
-		const draftId = drafts[0]!.replace(".patch", "");
+		const draftId = drafts[0]?.replace(".patch", "");
 
 		// Discard it
 		await dispatch(["discard", draftId], makeBaseOpts(tmpDir));
@@ -829,7 +834,7 @@ describe("[integration] AC9 — full propose → apply lifecycle", () => {
 			path.join(tmpDir, "docs", "PRD.md"),
 			"utf8",
 		);
-		const modified = original + "## New Section\n\nAdded by steward.\n";
+		const modified = `${original}## New Section\n\nAdded by steward.\n`;
 
 		// Create a proper diff
 		const diff = `--- a/docs/PRD.md

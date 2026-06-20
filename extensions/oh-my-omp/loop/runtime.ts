@@ -27,10 +27,10 @@ import type { AgentEndEvent } from "@oh-my-pi/pi-coding-agent";
 
 import { detectPromise } from "./promise-detector";
 import {
-	clearLoopState,
-	type LoopState,
 	type LoopMode,
+	type LoopState,
 	type LoopStrategy,
+	clearLoopState,
 	readLoopState,
 	writeLoopState,
 } from "./state";
@@ -188,44 +188,44 @@ export class LoopRuntime {
 
 	private ralphContinuationMessage(state: LoopState): string {
 		return [
-			`<system-reminder>`,
+			"<system-reminder>",
 			`Ralph loop iteration ${state.iter + 1}/${state.maxIterations}.`,
 			`Task: ${state.task}`,
 			`Continue working toward completion. Emit \`<promise>${state.completionPromise}</promise>\` only when the task is fully done.`,
-			`</system-reminder>`,
+			"</system-reminder>",
 		].join("\n");
 	}
 
 	private ulwContinuationMessage(state: LoopState): string {
 		return [
-			`<system-reminder>`,
+			"<system-reminder>",
 			`ULTRAWORK loop iteration ${state.iter + 1}/${state.maxIterations}.`,
 			`Task: ${state.task}`,
 			`Stay in ultrawork mode. Continue working toward verified completion. Emit \`<promise>${state.completionPromise}</promise>\` when you believe the work is finished — the system will then require Oracle verification before the loop ends.`,
-			`</system-reminder>`,
+			"</system-reminder>",
 		].join("\n");
 	}
 
 	private ulwOracleVerificationMessage(state: LoopState): string {
 		return [
-			`<system-reminder>`,
+			"<system-reminder>",
 			`You emitted the completion promise \`<promise>${state.completionPromise}</promise>\`.`,
-			`Before the loop terminates, you MUST request Oracle verification.`,
-			``,
-			`Spawn the Oracle agent with the following task tool call:`,
-			`\`\`\``,
-			`task(`,
+			"Before the loop terminates, you MUST request Oracle verification.",
+			"",
+			"Spawn the Oracle agent with the following task tool call:",
+			"```",
+			"task(",
 			`  agent: "oracle",`,
-			`  tasks: [{`,
+			"  tasks: [{",
 			`    id: "ulw-verify",`,
 			`    description: "Verify ULW completion",`,
 			`    assignment: "Verify the work for: ${state.task}\\n\\nReview the final state of the codebase: did the implementation actually deliver what the task asked for? Return APPROVE or REJECT with concrete reasons. If REJECT, list the specific issues that must be fixed."`,
-			`  }]`,
-			`)`,
-			`\`\`\``,
-			``,
+			"  }]",
+			")",
+			"```",
+			"",
 			`Then summarise Oracle's verdict to the user. The loop will terminate after this turn.`,
-			`</system-reminder>`,
+			"</system-reminder>",
 		].join("\n");
 	}
 }
