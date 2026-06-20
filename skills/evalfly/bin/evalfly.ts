@@ -237,7 +237,7 @@ async function compareCommand(
 	const failedDelta = after.summary.failed - baseline.summary.failed;
 	const criticalDelta =
 		after.summary.critical_regressions - baseline.summary.critical_regressions;
-	const passed =
+	const comparisonPassed =
 		after.summary.critical_regressions === 0 &&
 		failedDelta <= 0 &&
 		criticalDelta <= 0;
@@ -249,10 +249,10 @@ async function compareCommand(
 		`passed delta: ${formatDelta(passedDelta)}`,
 		`failed delta: ${formatDelta(failedDelta)}`,
 		`critical_regressions delta: ${formatDelta(criticalDelta)}`,
-		`verdict: ${passed ? "pass" : "fail"}`,
+		`comparison verdict: ${comparisonPassed ? "pass" : "fail"}`,
 	];
 	return {
-		exitCode: passed ? 0 : 1,
+		exitCode: comparisonPassed ? 0 : 1,
 		stdout: `${lines.join("\n")}\n`,
 		stderr: "",
 	};

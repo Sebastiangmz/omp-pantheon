@@ -835,10 +835,11 @@ describe("evalfly CLI", () => {
 		);
 		expect(result.stdout).toContain("baseline verdict: fail");
 		expect(result.stdout).toContain("after verdict: pass");
+		expect(result.stdout).toContain("total delta: 0");
 		expect(result.stdout).toContain("passed delta: +1");
 		expect(result.stdout).toContain("failed delta: -1");
 		expect(result.stdout).toContain("critical_regressions delta: -1");
-		expect(result.stdout).toContain("verdict: pass");
+		expect(result.stdout).toContain("comparison verdict: pass");
 	});
 
 	test("compare fails when the after run adds a critical regression", async () => {
@@ -867,9 +868,62 @@ describe("evalfly CLI", () => {
 		);
 		expect(result.stdout).toContain("baseline verdict: pass");
 		expect(result.stdout).toContain("after verdict: fail");
+		expect(result.stdout).toContain("total delta: 0");
 		expect(result.stdout).toContain("failed delta: +1");
 		expect(result.stdout).toContain("critical_regressions delta: +1");
-		expect(result.stdout).toContain("verdict: fail");
+		expect(result.stdout).toContain("comparison verdict: fail");
+	});
+
+	test("compare fails when failed count worsens without critical regressions", async () => {
+		const cwd = await makeProject();
+		await writeSavedRun(cwd, "baseline-run", {
+			total: 1,
+			passed: 1,
+			failed: 0,
+			critical_regressions: 0,
+		});
+		await writeSavedRun(cwd, "after-run", {
+			total: 1,
+			passed: 0,
+			failed: 1,
+			critical_regressions: 0,
+		});
+
+		const result = await dispatch(["compare", "baseline-run", "after-run"], {
+			cwd,
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toBe("");
+		expect(result.stdout).toContain("failed delta: +1");
+		expect(result.stdout).toContain("critical_regressions delta: 0");
+		expect(result.stdout).toContain("comparison verdict: fail");
+	});
+
+	test("compare fails while critical regressions remain nonzero after improving", async () => {
+		const cwd = await makeProject();
+		await writeSavedRun(cwd, "baseline-run", {
+			total: 3,
+			passed: 1,
+			failed: 2,
+			critical_regressions: 2,
+		});
+		await writeSavedRun(cwd, "after-run", {
+			total: 3,
+			passed: 2,
+			failed: 1,
+			critical_regressions: 1,
+		});
+
+		const result = await dispatch(["compare", "baseline-run", "after-run"], {
+			cwd,
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toBe("");
+		expect(result.stdout).toContain("failed delta: -1");
+		expect(result.stdout).toContain("critical_regressions delta: -1");
+		expect(result.stdout).toContain("comparison verdict: fail");
 	});
 
 	test("list rejects malformed saved run records instead of hiding them", async () => {
