@@ -278,7 +278,7 @@ function applyMode(
 			fs.cpSync(
 				path.join(PI_SESHAT_ROOT, "skills", "evalfly", "templates", "evals"),
 				evalsPath,
-				{ recursive: true, errorOnExist: true },
+				{ recursive: true, errorOnExist: true, force: false },
 			);
 			out.write("copied EvalFly evals template\n");
 			applied.push("evals");

@@ -289,4 +289,11 @@ describe("[unit] bootstrap skill", () => {
 		expect(result.stdout).toContain("evals exists — skipping EvalFly template");
 		expect(readText("evals/config.json")).toBe("USER CONFIG");
 	});
+
+	test("C15 EvalFly template copy is fail-closed if the destination appears after planning", () => {
+		const source = fs.readFileSync(bootstrapBin, "utf-8");
+
+		expect(source).toContain("errorOnExist: true");
+		expect(source).toContain("force: false");
+	});
 });
