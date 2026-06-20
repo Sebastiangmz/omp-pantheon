@@ -34,6 +34,7 @@ Run commands from the project root that contains `evals/config.json`. After inst
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts validate
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts run --suite smoke [--commit-range main..HEAD]
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts check --suite smoke [--commit-range main..HEAD]
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts latest
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts report <run-id>
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitized-name>
 ```
@@ -44,6 +45,7 @@ When developing this bundle itself, the repo-local path also works:
 bun run skills/evalfly/bin/evalfly.ts validate
 bun run skills/evalfly/bin/evalfly.ts run --suite smoke [--commit-range main..HEAD]
 bun run skills/evalfly/bin/evalfly.ts check --suite smoke [--commit-range main..HEAD]
+bun run skills/evalfly/bin/evalfly.ts latest
 bun run skills/evalfly/bin/evalfly.ts report <run-id>
 bun run skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitized-name>
 ```
@@ -52,6 +54,7 @@ bun run skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitize
 - `run --suite smoke` executes deterministic cases in the smoke suite and writes `evals/runs/<run-id>.json` plus `evals/reports/<run-id>.md`.
 - `run --suite smoke --commit-range main..HEAD` adds the commit range to the run context. When `.pi/.specsafe-state.json` has an open `currentSlice`, evalfly also copies `currentSlice.id` and `currentSlice.sessionId` into the run/report by reference without mutating SpecSafe state.
 - `check --suite smoke` is the explicit local gate command: it validates config, runs the smoke suite, writes the same run/report evidence, prints the report path, and exits nonzero on a failing verdict. It is not wired into hooks, CI, or merges unless a project chooses to call it.
+- `latest` reads `evals/runs/*.json`, validates saved run records, and prints the newest run id, verdict, suite, and report path for handoff or review.
 - `report <run-id>` regenerates the markdown report from a saved run JSON.
 - `curate-trace <raw-relative-path> <sanitized-name>` copies a local trace from ignored `.pi/evalfly/raw/` into `evals/traces/sanitized/` only after deterministic checks for path safety and obvious unsanitized content. It does not capture traces and does not redact automatically.
 
