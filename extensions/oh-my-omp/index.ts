@@ -54,7 +54,7 @@ export default async function (pi: ExtensionAPI): Promise<void> {
 
 	registerLoopCommands(pi, runtime);
 
-	// Lifecycle hooks (discipline enforcement).
+	// Lifecycle hooks: advisory context plus discipline enforcement.
 	registerEvalFlyAdvisor(pi);
 	registerTodoEnforcer(pi);
 	registerCommentChecker(pi);

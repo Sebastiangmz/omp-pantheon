@@ -6,7 +6,10 @@ import { describe, expect, test } from "bun:test";
 
 import { registerEvalFlyAdvisor } from "../extensions/oh-my-omp/hooks/evalfly-advisor";
 
-type SessionStopHandler = (event?: unknown, ctx?: unknown) => unknown;
+type HookHandler = (
+	event?: unknown,
+	ctx?: { cwd: string; hasUI: boolean },
+) => unknown;
 
 function makeProject(): string {
 	const cwd = mkdtempSync(join(tmpdir(), "evalfly-advisor-"));
@@ -18,11 +21,16 @@ function makeProject(): string {
 	return cwd;
 }
 
+function enableHints(cwd: string): void {
+	mkdirSync(join(cwd, ".pi", "evalfly"), { recursive: true });
+	writeFileSync(join(cwd, ".pi", "evalfly", "hints-enabled"), "1\n");
+}
+
 function registerWithFakePi() {
-	const handlers: Record<string, SessionStopHandler[]> = {};
+	const handlers: Record<string, HookHandler[]> = {};
 	const logs: string[] = [];
 	registerEvalFlyAdvisor({
-		on(event: string, handler: SessionStopHandler) {
+		on(event: string, handler: HookHandler) {
 			(handlers[event] ??= []).push(handler);
 		},
 		logger: {
@@ -42,32 +50,66 @@ describe("EvalFly advisory hook", () => {
 		const cwd = makeProject();
 		const { handlers } = registerWithFakePi();
 
-		const result = handlers.session_stop?.[0]?.({}, { cwd });
+		const result = handlers.before_agent_start?.[0]?.({}, { cwd, hasUI: true });
 
 		expect(result).toBeUndefined();
 	});
 
-	test("returns non-blocking EvalFly context when hints are enabled", () => {
+	test("injects non-blocking EvalFly context when hints are enabled", () => {
 		const cwd = makeProject();
-		mkdirSync(join(cwd, ".pi", "evalfly"), { recursive: true });
-		writeFileSync(join(cwd, ".pi", "evalfly", "hints-enabled"), "1\n");
+		enableHints(cwd);
 		const { handlers } = registerWithFakePi();
 
-		const result = handlers.session_stop?.[0]?.({}, { cwd });
+		const result = handlers.before_agent_start?.[0]?.({}, { cwd, hasUI: true });
 
 		expect(result).toEqual({
-			additionalContext: expect.stringContaining("EvalFly evidence is opt-in"),
+			message: {
+				customType: "evalfly-advisor",
+				content: expect.stringContaining("EvalFly evidence is opt-in"),
+				display: false,
+				details: "Injected by oh-my-omp evalfly-advisor (opt-in)",
+				attribution: "user",
+			},
 		});
 		expect(JSON.stringify(result)).not.toContain("continue");
 	});
 
-	test("does nothing when hints are enabled but no evals config exists", () => {
-		const cwd = mkdtempSync(join(tmpdir(), "evalfly-advisor-no-config-"));
-		mkdirSync(join(cwd, ".pi", "evalfly"), { recursive: true });
-		writeFileSync(join(cwd, ".pi", "evalfly", "hints-enabled"), "1\n");
+	test("injects at most once per session and resets on session switch", () => {
+		const cwd = makeProject();
+		enableHints(cwd);
 		const { handlers } = registerWithFakePi();
 
-		const result = handlers.session_stop?.[0]?.({}, { cwd });
+		expect(
+			handlers.before_agent_start?.[0]?.({}, { cwd, hasUI: true }),
+		).toBeDefined();
+		expect(
+			handlers.before_agent_start?.[0]?.({}, { cwd, hasUI: true }),
+		).toBeUndefined();
+		handlers.session_switch?.[0]?.({}, { cwd, hasUI: true });
+		expect(
+			handlers.before_agent_start?.[0]?.({}, { cwd, hasUI: true }),
+		).toBeDefined();
+	});
+
+	test("does nothing when hints are enabled but no evals config exists", () => {
+		const cwd = mkdtempSync(join(tmpdir(), "evalfly-advisor-no-config-"));
+		enableHints(cwd);
+		const { handlers } = registerWithFakePi();
+
+		const result = handlers.before_agent_start?.[0]?.({}, { cwd, hasUI: true });
+
+		expect(result).toBeUndefined();
+	});
+
+	test("does nothing in headless subagents", () => {
+		const cwd = makeProject();
+		enableHints(cwd);
+		const { handlers } = registerWithFakePi();
+
+		const result = handlers.before_agent_start?.[0]?.(
+			{},
+			{ cwd, hasUI: false },
+		);
 
 		expect(result).toBeUndefined();
 	});

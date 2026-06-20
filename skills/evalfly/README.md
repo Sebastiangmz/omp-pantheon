@@ -58,4 +58,4 @@ Use `curate-trace` only after you have manually minimized the trace to the small
 
 ## Current scope
 
-Evalfly is evidence tooling, not enforcement. The contract MVP does not add CI gates, hooks, automatic raw trace capture, LLM-judge requirements, or external-memory dependencies.
+Evalfly is evidence tooling, not enforcement. The contract MVP does not add CI gates, blocking hook enforcement, automatic raw trace capture, LLM-judge requirements, or external-memory dependencies. The optional `evalfly-advisor` extension hook is inactive unless a project opts in with `.pi/evalfly/hints-enabled` and `evals/config.json`; it only injects non-blocking reminder context.

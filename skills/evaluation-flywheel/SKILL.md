@@ -92,7 +92,7 @@ Keep SpecSafe state focused on slice lifecycle. Do not add eval payloads, raw tr
 
 ## Optional advisory hook
 
-The bundled `evalfly-advisor` extension hook is inactive by default. A project opts in by creating `.pi/evalfly/hints-enabled` and `evals/config.json`. When enabled, the hook adds non-blocking session-stop context reminding the agent to cite EvalFly evidence or explain why it is not applicable.
+The bundled `evalfly-advisor` extension hook is inactive by default. A project opts in by creating `.pi/evalfly/hints-enabled` and `evals/config.json`. When enabled, the hook injects non-blocking first-turn context reminding the agent to cite EvalFly evidence or explain why it is not applicable.
 
 This hook never runs evals, never captures traces, never blocks completion, and never turns EvalFly into CI or merge enforcement.
 
