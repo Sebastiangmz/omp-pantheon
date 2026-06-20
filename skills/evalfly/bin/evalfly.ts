@@ -34,7 +34,7 @@ const UNSANITIZED_TRACE_PATTERNS = [
 ] as const;
 
 const USAGE =
-	"Usage: evalfly validate | run --suite smoke | check --suite smoke | latest | list | summary | traces | compare <baseline-run-id> <after-run-id> | report <run-id> | curate-trace <raw-relative-path> <sanitized-name> | normalize-trace <raw-relative-path> <sanitized-name> | import-session-trace <raw-relative-path> <sanitized-name>";
+	"Usage: evalfly validate | run --suite smoke | check --suite smoke | latest | list | summary | traces | audit-traces | compare <baseline-run-id> <after-run-id> | report <run-id> | curate-trace <raw-relative-path> <sanitized-name> | normalize-trace <raw-relative-path> <sanitized-name> | import-session-trace <raw-relative-path> <sanitized-name>";
 
 export type DispatchOptions = {
 	cwd?: string;
@@ -96,6 +96,9 @@ export async function dispatch(
 		}
 		if (command === "traces") {
 			return await tracesCommand(cwd);
+		}
+		if (command === "audit-traces") {
+			return await auditTracesCommand(cwd);
 		}
 		if (command === "report") {
 			return await reportCommand(args.slice(1), cwd);
@@ -387,6 +390,141 @@ async function tracesCommand(cwd: string): Promise<DispatchResult> {
 		stdout: `${lines.join("\n")}\n`,
 		stderr: "",
 	};
+}
+
+async function auditTracesCommand(cwd: string): Promise<DispatchResult> {
+	const traces = await readSanitizedTraceArtifacts(cwd);
+	const privacyIssues: string[] = [];
+	const curationCandidates: string[] = [];
+	for (const trace of traces) {
+		try {
+			assertSanitizedTrace(trace.content);
+		} catch {
+			privacyIssues.push(`${trace.relativePath} appears unsanitized`);
+		}
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(trace.content);
+		} catch {
+			privacyIssues.push(`${trace.relativePath} invalid JSON`);
+			continue;
+		}
+		for (const rawField of findRawTraceFields(parsed, [])) {
+			privacyIssues.push(`${trace.relativePath} raw field ${rawField}`);
+		}
+		if (isRecord(parsed) && isRecord(parsed.summary)) {
+			const cost = parsed.summary.total_cost_usd;
+			if (typeof cost === "number" && cost >= 0.05) {
+				curationCandidates.push(
+					`${trace.relativePath} high_cost total_cost_usd=${cost}`,
+				);
+			}
+			const latency = parsed.summary.total_latency_ms;
+			if (typeof latency === "number" && latency >= 60000) {
+				curationCandidates.push(
+					`${trace.relativePath} high_latency total_latency_ms=${latency}`,
+				);
+			}
+		}
+		if (isRecord(parsed) && Array.isArray(parsed.events)) {
+			for (const [index, event] of parsed.events.entries()) {
+				if (
+					isRecord(event) &&
+					event.sanitized_input === undefined &&
+					event.sanitized_output === undefined
+				) {
+					curationCandidates.push(
+						`${trace.relativePath} missing_sanitized_evidence event=${index}`,
+					);
+				}
+			}
+		}
+	}
+	const lines = [
+		"evalfly trace audit:",
+		`traces: ${traces.length}`,
+		`privacy issues: ${privacyIssues.length}`,
+		`curation candidates: ${curationCandidates.length}`,
+	];
+	for (const issue of privacyIssues) {
+		lines.push(`privacy issue: ${issue}`);
+	}
+	for (const candidate of curationCandidates) {
+		lines.push(`curation candidate: ${candidate}`);
+	}
+	return {
+		exitCode: privacyIssues.length > 0 ? 1 : 0,
+		stdout: `${lines.join("\n")}\n`,
+		stderr: "",
+	};
+}
+
+type SanitizedTraceArtifact = {
+	relativePath: string;
+	content: string;
+};
+
+async function readSanitizedTraceArtifacts(
+	cwd: string,
+): Promise<SanitizedTraceArtifact[]> {
+	const tracesDir = await readExactArtifactDir(cwd, [
+		"evals",
+		"traces",
+		"sanitized",
+	]);
+	if (!tracesDir) {
+		throw new Error("no sanitized evalfly traces found");
+	}
+	const files = (await readdir(tracesDir))
+		.filter((file) => file !== ".gitkeep")
+		.sort();
+	if (files.length === 0) {
+		throw new Error("no sanitized evalfly traces found");
+	}
+	const traces: SanitizedTraceArtifact[] = [];
+	for (const file of files) {
+		assertSafeTraceName(file);
+		const relativeTracePath = join("evals", "traces", "sanitized", file);
+		const tracePath = resolve(tracesDir, file);
+		const stat = await lstat(tracePath);
+		if (!stat.isFile() || stat.isSymbolicLink()) {
+			throw new Error(`unsafe sanitized trace: ${relativeTracePath}`);
+		}
+		const realTracePath = await realpath(tracePath);
+		if (realTracePath !== tracePath) {
+			throw new Error(`unsafe sanitized trace: ${relativeTracePath}`);
+		}
+		traces.push({
+			relativePath: relativeTracePath,
+			content: await readFile(tracePath, "utf8"),
+		});
+	}
+	return traces;
+}
+
+function findRawTraceFields(value: unknown, path: string[]): string[] {
+	if (Array.isArray(value)) {
+		return value.flatMap((item, index) =>
+			findRawTraceFields(
+				item,
+				[...path.slice(0, -1), `${path.at(-1) ?? ""}[${index}]`].filter(
+					Boolean,
+				),
+			),
+		);
+	}
+	if (!isRecord(value)) {
+		return [];
+	}
+	const fields: string[] = [];
+	for (const [key, child] of Object.entries(value)) {
+		const childPath = [...path, key];
+		if (key === "input" || key === "output" || key === "content") {
+			fields.push(childPath.join("."));
+		}
+		fields.push(...findRawTraceFields(child, childPath));
+	}
+	return fields;
 }
 
 async function readSavedRuns(cwd: string): Promise<EvalRun[]> {
