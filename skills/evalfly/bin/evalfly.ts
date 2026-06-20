@@ -34,7 +34,7 @@ const UNSANITIZED_TRACE_PATTERNS = [
 ] as const;
 
 const USAGE =
-	"Usage: evalfly validate | run --suite smoke | check --suite smoke | latest | report <run-id> | curate-trace <raw-relative-path> <sanitized-name>";
+	"Usage: evalfly validate | run --suite smoke | check --suite smoke | latest | list | report <run-id> | curate-trace <raw-relative-path> <sanitized-name>";
 
 export type DispatchOptions = {
 	cwd?: string;
@@ -84,6 +84,9 @@ export async function dispatch(
 		}
 		if (command === "latest") {
 			return await latestCommand(cwd);
+		}
+		if (command === "list") {
+			return await listCommand(cwd);
 		}
 		if (command === "report") {
 			return await reportCommand(args.slice(1), cwd);
@@ -208,6 +211,42 @@ async function reportCommand(
 }
 
 async function latestCommand(cwd: string): Promise<DispatchResult> {
+	const runs = await readSavedRuns(cwd);
+	let latest: EvalRun | undefined;
+	for (const run of runs) {
+		if (!latest || run.created_at > latest.created_at) {
+			latest = run;
+		}
+	}
+	if (!latest) {
+		throw new Error("no evalfly runs found");
+	}
+	const reportPath = await canonicalReportPath(cwd, latest.run_id);
+	return {
+		exitCode: 0,
+		stdout: `latest evalfly run: ${latest.run_id}\nverdict: ${latest.verdict}\nsuite: ${latest.suite}\nreport: ${reportPath}\n`,
+		stderr: "",
+	};
+}
+
+async function listCommand(cwd: string): Promise<DispatchResult> {
+	const runs = await readSavedRuns(cwd);
+	const lines = ["evalfly runs:"];
+	for (const run of runs.sort((a, b) =>
+		b.created_at.localeCompare(a.created_at),
+	)) {
+		lines.push(
+			`${run.created_at} ${run.run_id} ${run.verdict} ${run.suite} ${await canonicalReportPath(cwd, run.run_id)}`,
+		);
+	}
+	return {
+		exitCode: 0,
+		stdout: `${lines.join("\n")}\n`,
+		stderr: "",
+	};
+}
+
+async function readSavedRuns(cwd: string): Promise<EvalRun[]> {
 	const runsDir = await readExactArtifactDir(cwd, ["evals", "runs"]);
 	if (!runsDir) {
 		throw new Error("no evalfly runs found");
@@ -218,7 +257,7 @@ async function latestCommand(cwd: string): Promise<DispatchResult> {
 	if (files.length === 0) {
 		throw new Error("no evalfly runs found");
 	}
-	let latest: EvalRun | undefined;
+	const runs: EvalRun[] = [];
 	for (const file of files) {
 		const runId = file.slice(0, -".json".length);
 		assertSafeRunId(runId);
@@ -242,19 +281,9 @@ async function latestCommand(cwd: string): Promise<DispatchResult> {
 				`run_id mismatch: requested ${runId} but saved run is ${result.value.run_id}`,
 			);
 		}
-		if (!latest || result.value.created_at > latest.created_at) {
-			latest = result.value;
-		}
+		runs.push(result.value);
 	}
-	if (!latest) {
-		throw new Error("no evalfly runs found");
-	}
-	const reportPath = await canonicalReportPath(cwd, latest.run_id);
-	return {
-		exitCode: 0,
-		stdout: `latest evalfly run: ${latest.run_id}\nverdict: ${latest.verdict}\nsuite: ${latest.suite}\nreport: ${reportPath}\n`,
-		stderr: "",
-	};
+	return runs;
 }
 
 async function canonicalReportPath(

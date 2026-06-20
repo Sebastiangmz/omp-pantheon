@@ -647,6 +647,70 @@ describe("evalfly CLI", () => {
 		expect(result.stdout).not.toContain("run-older");
 	});
 
+	test("list prints valid runs newest first with canonical report paths", async () => {
+		const cwd = await makeProject();
+		await writeFile(join(cwd, "expected.txt"), "ok");
+		await dispatch(["run", "--suite", "smoke"], {
+			cwd,
+			now: () => new Date("2026-06-19T12:00:00.000Z"),
+			runId: "run-older",
+		});
+		await dispatch(["run", "--suite", "smoke"], {
+			cwd,
+			now: () => new Date("2026-06-20T12:00:00.000Z"),
+			runId: "run-newer",
+		});
+		const runPath = join(cwd, "evals", "runs", "run-newer.json");
+		const run = JSON.parse(await readFile(runPath, "utf8"));
+		run.context.eval_report_path = "/Users/sebastian/private/raw-trace.md";
+		await writeFile(runPath, JSON.stringify(run, null, 2));
+
+		const result = await dispatch(["list"], { cwd });
+
+		expect(result.exitCode).toBe(0);
+		expect(result.stderr).toBe("");
+		expect(result.stdout).toContain("evalfly runs:\n");
+		expect(result.stdout).toContain(
+			"2026-06-20T12:00:00.000Z run-newer pass smoke evals/reports/run-newer.md",
+		);
+		expect(result.stdout).toContain(
+			"2026-06-19T12:00:00.000Z run-older pass smoke evals/reports/run-older.md",
+		);
+		expect(result.stdout.indexOf("run-newer")).toBeLessThan(
+			result.stdout.indexOf("run-older"),
+		);
+		expect(result.stdout).not.toContain("/Users/sebastian");
+	});
+
+	test("list rejects malformed saved run records instead of hiding them", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, "evals", "runs"), { recursive: true });
+		await writeFile(
+			join(cwd, "evals", "runs", "broken.json"),
+			JSON.stringify({
+				schema_version: "evalfly.run.v1",
+				run_id: "broken",
+				suite: "smoke",
+				config_name: "Smoke suite",
+				created_at: "2026-06-20T12:00:00.000Z",
+				results: "not-an-array",
+				summary: {
+					total: 0,
+					passed: 0,
+					failed: 0,
+					critical_regressions: 0,
+				},
+				verdict: "pass",
+			}),
+		);
+
+		const result = await dispatch(["list"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("invalid evals/runs/broken.json");
+		expect(result.stderr).toContain("results must be an array");
+	});
+
 	test("latest rejects malformed saved run records instead of hiding them", async () => {
 		const cwd = await makeProject();
 		await mkdir(join(cwd, "evals", "runs"), { recursive: true });
