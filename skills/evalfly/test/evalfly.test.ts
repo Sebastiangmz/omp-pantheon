@@ -827,4 +827,93 @@ describe("evalfly CLI", () => {
 		expect(result.stderr).toContain("invalid evals/runs/malformed-run.json");
 		expect(result.stderr).toContain("results must be an array");
 	});
+
+	test("curate-trace copies a sanitized raw trace into evals/traces/sanitized", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });
+		const trace = `${JSON.stringify(
+			{
+				events: [
+					{
+						role: "assistant",
+						content: "Use the report path evals/reports/run-smoke.md",
+					},
+				],
+			},
+			null,
+			2,
+		)}\n`;
+		await writeFile(join(cwd, ".pi", "evalfly", "raw", "trace.json"), trace);
+
+		const result = await dispatch(
+			["curate-trace", "trace.json", "example-trace.json"],
+			{ cwd },
+		);
+
+		expect(result.exitCode).toBe(0);
+		expect(result.stdout).toContain(
+			"evals/traces/sanitized/example-trace.json",
+		);
+		expect(
+			await readFile(
+				join(cwd, "evals", "traces", "sanitized", "example-trace.json"),
+				"utf8",
+			),
+		).toBe(trace);
+	});
+
+	test("curate-trace rejects traces with obvious secrets before writing", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });
+		await writeFile(
+			join(cwd, ".pi", "evalfly", "raw", "secret.json"),
+			JSON.stringify({ Authorization: "Bearer secret-token-value" }),
+		);
+
+		const result = await dispatch(
+			["curate-trace", "secret.json", "secret.json"],
+			{ cwd },
+		);
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("trace appears unsanitized");
+		await expect(
+			readFile(join(cwd, "evals", "traces", "sanitized", "secret.json")),
+		).rejects.toThrow();
+	});
+
+	test("curate-trace refuses raw trace symlink escapes", async () => {
+		const cwd = await makeProject();
+		const outsideDir = await mkdtemp(join(tmpdir(), "evalfly-raw-outside-"));
+		await writeFile(join(outsideDir, "trace.json"), '{"safe":true}\n');
+		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });
+		await symlink(
+			join(outsideDir, "trace.json"),
+			join(cwd, ".pi", "evalfly", "raw", "link.json"),
+		);
+
+		const result = await dispatch(["curate-trace", "link.json", "link.json"], {
+			cwd,
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("unsafe raw trace path");
+		await expect(
+			readFile(join(cwd, "evals", "traces", "sanitized", "link.json")),
+		).rejects.toThrow();
+	});
+
+	test("curate-trace refuses unsafe sanitized trace names", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });
+		await writeFile(join(cwd, ".pi", "evalfly", "raw", "trace.json"), "{}\n");
+
+		const result = await dispatch(
+			["curate-trace", "trace.json", "../trace.json"],
+			{ cwd },
+		);
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("unsafe sanitized trace name");
+	});
 });
