@@ -1,0 +1,19 @@
+{
+	"schema_version": "evalfly.case.v1",
+	"case_id": "evalfly-modes-doc-exists",
+	"title": "EvalFly modes documentation exists",
+	"suite": "smoke",
+	"risk_tier": "critical",
+	"task_type": "documentation_contract",
+	"source": { "kind": "project_eval_repo" },
+	"privacy": { "classification": "public", "sanitized": true },
+	"expected": {
+		"success_criteria": [
+			"The EvalFly modes documentation exists at docs/evalfly/modes.md."
+		]
+	},
+	"judge": {
+		"type": "deterministic",
+		"assertions": [{ "type": "file_exists", "path": "docs/evalfly/modes.md" }]
+	}
+}

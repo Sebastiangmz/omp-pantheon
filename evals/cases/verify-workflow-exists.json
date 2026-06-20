@@ -1,0 +1,21 @@
+{
+	"schema_version": "evalfly.case.v1",
+	"case_id": "verify-workflow-exists",
+	"title": "Verify workflow exists",
+	"suite": "smoke",
+	"risk_tier": "critical",
+	"task_type": "ci_contract",
+	"source": { "kind": "project_eval_repo" },
+	"privacy": { "classification": "public", "sanitized": true },
+	"expected": {
+		"success_criteria": [
+			"The base GitHub Actions verify workflow exists at .github/workflows/verify.yml."
+		]
+	},
+	"judge": {
+		"type": "deterministic",
+		"assertions": [
+			{ "type": "file_exists", "path": ".github/workflows/verify.yml" }
+		]
+	}
+}

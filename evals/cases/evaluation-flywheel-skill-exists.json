@@ -1,0 +1,21 @@
+{
+	"schema_version": "evalfly.case.v1",
+	"case_id": "evaluation-flywheel-skill-exists",
+	"title": "Evaluation Flywheel skill exists",
+	"suite": "smoke",
+	"risk_tier": "critical",
+	"task_type": "methodology_contract",
+	"source": { "kind": "project_eval_repo" },
+	"privacy": { "classification": "public", "sanitized": true },
+	"expected": {
+		"success_criteria": [
+			"The Evaluation Flywheel methodology skill exists at skills/evaluation-flywheel/SKILL.md."
+		]
+	},
+	"judge": {
+		"type": "deterministic",
+		"assertions": [
+			{ "type": "file_exists", "path": "skills/evaluation-flywheel/SKILL.md" }
+		]
+	}
+}
