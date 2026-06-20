@@ -34,3 +34,4 @@ secrets.json
 .pi/.bootstrap-log.jsonl
 
 .pi/evalfly/raw/
+.pi/evalfly/enforcement.json
