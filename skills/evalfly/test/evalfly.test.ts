@@ -637,6 +637,87 @@ describe("evalfly CLI", () => {
 		expect(result.stderr).toContain("results must be an array");
 	});
 
+	test("latest rejects non-ISO created_at values before ordering", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, "evals", "runs"), { recursive: true });
+		await writeFile(
+			join(cwd, "evals", "runs", "bad-date.json"),
+			JSON.stringify({
+				schema_version: "evalfly.run.v1",
+				run_id: "bad-date",
+				suite: "smoke",
+				config_name: "Smoke suite",
+				created_at: "zz",
+				results: [],
+				summary: {
+					total: 0,
+					passed: 0,
+					failed: 0,
+					critical_regressions: 0,
+				},
+				verdict: "pass",
+			}),
+		);
+
+		const result = await dispatch(["latest"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("invalid evals/runs/bad-date.json");
+		expect(result.stderr).toContain("created_at must be an ISO timestamp");
+	});
+
+	test("latest derives report path from run id instead of saved context", async () => {
+		const cwd = await makeProject();
+		await writeFile(join(cwd, "expected.txt"), "ok");
+		await dispatch(["run", "--suite", "smoke"], {
+			cwd,
+			now: () => new Date("2026-06-20T12:00:00.000Z"),
+			runId: "run-canonical-report",
+		});
+		const runPath = join(cwd, "evals", "runs", "run-canonical-report.json");
+		const run = JSON.parse(await readFile(runPath, "utf8"));
+		run.context.eval_report_path = "/Users/sebastian/private/raw-trace.md";
+		await writeFile(runPath, JSON.stringify(run, null, 2));
+
+		const result = await dispatch(["latest"], { cwd });
+
+		expect(result.exitCode).toBe(0);
+		expect(result.stdout).toContain(
+			"report: evals/reports/run-canonical-report.md",
+		);
+		expect(result.stdout).not.toContain("/Users/sebastian");
+	});
+
+	test("latest requires the canonical report artifact to exist", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, "evals", "runs"), { recursive: true });
+		await writeFile(
+			join(cwd, "evals", "runs", "missing-report.json"),
+			JSON.stringify({
+				schema_version: "evalfly.run.v1",
+				run_id: "missing-report",
+				suite: "smoke",
+				config_name: "Smoke suite",
+				created_at: "2026-06-20T12:00:00.000Z",
+				results: [],
+				summary: {
+					total: 0,
+					passed: 0,
+					failed: 0,
+					critical_regressions: 0,
+				},
+				verdict: "pass",
+			}),
+		);
+
+		const result = await dispatch(["latest"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain(
+			"missing report: evals/reports/missing-report.md",
+		);
+	});
+
 	test("latest fails clearly when no run artifacts exist", async () => {
 		const cwd = await makeProject();
 
@@ -644,8 +725,20 @@ describe("evalfly CLI", () => {
 
 		expect(result.exitCode).toBe(1);
 		expect(result.stderr).toContain("no evalfly runs found");
+		await expect(access(join(cwd, "evals", "runs"))).rejects.toThrow();
 	});
 
+	test("latest does not create runs through a symlinked evals directory", async () => {
+		const cwd = await mkdtemp(join(tmpdir(), "evalfly-"));
+		const outsideDir = await mkdtemp(join(tmpdir(), "evalfly-latest-outside-"));
+		await symlink(outsideDir, join(cwd, "evals"), "dir");
+
+		const result = await dispatch(["latest"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("artifact directory must be evals");
+		await expect(access(join(outsideDir, "runs"))).rejects.toThrow();
+	});
 	test("report rejects unsafe run ids before reading run artifacts", async () => {
 		const cwd = await makeProject();
 

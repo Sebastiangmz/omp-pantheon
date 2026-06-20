@@ -208,7 +208,10 @@ async function reportCommand(
 }
 
 async function latestCommand(cwd: string): Promise<DispatchResult> {
-	const runsDir = await ensureExactArtifactDir(cwd, ["evals", "runs"]);
+	const runsDir = await readExactArtifactDir(cwd, ["evals", "runs"]);
+	if (!runsDir) {
+		throw new Error("no evalfly runs found");
+	}
 	const files = (await readdir(runsDir))
 		.filter((file) => file.endsWith(".json"))
 		.sort();
@@ -240,11 +243,34 @@ async function latestCommand(cwd: string): Promise<DispatchResult> {
 	if (!latest) {
 		throw new Error("no evalfly runs found");
 	}
+	const reportPath = await canonicalReportPath(cwd, latest.run_id);
 	return {
 		exitCode: 0,
-		stdout: `latest evalfly run: ${latest.run_id}\nverdict: ${latest.verdict}\nsuite: ${latest.suite}\nreport: ${latest.context?.eval_report_path ?? join("evals", "reports", `${latest.run_id}.md`)}\n`,
+		stdout: `latest evalfly run: ${latest.run_id}\nverdict: ${latest.verdict}\nsuite: ${latest.suite}\nreport: ${reportPath}\n`,
 		stderr: "",
 	};
+}
+
+async function canonicalReportPath(
+	cwd: string,
+	runId: string,
+): Promise<string> {
+	const relativeReportPath = join("evals", "reports", `${runId}.md`);
+	try {
+		const reportPath = await artifactPath(
+			cwd,
+			["evals", "reports"],
+			runId,
+			".md",
+		);
+		await access(reportPath);
+		return relativeReportPath;
+	} catch (error) {
+		if (missingPathError(error)) {
+			throw new Error(`missing report: ${relativeReportPath}`);
+		}
+		throw error;
+	}
 }
 
 async function curateTraceCommand(
@@ -699,6 +725,24 @@ async function ensureExactArtifactDir(
 	const realArtifactDir = await realpath(artifactDir);
 	await assertExactArtifactDir(cwd, artifactDirParts, realArtifactDir);
 	return realArtifactDir;
+}
+
+async function readExactArtifactDir(
+	cwd: string,
+	artifactDirParts: readonly string[],
+): Promise<string | undefined> {
+	await assertProjectEvalsDir(cwd);
+	const artifactDir = join(cwd, ...artifactDirParts);
+	try {
+		const realArtifactDir = await realpath(artifactDir);
+		await assertExactArtifactDir(cwd, artifactDirParts, realArtifactDir);
+		return realArtifactDir;
+	} catch (error) {
+		if (missingPathError(error)) {
+			return undefined;
+		}
+		throw error;
+	}
 }
 
 async function assertExactArtifactDir(
