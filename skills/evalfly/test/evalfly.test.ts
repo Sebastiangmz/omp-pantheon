@@ -745,6 +745,18 @@ describe("evalfly CLI", () => {
 		expect(result.stdout).not.toContain(".pi/evalfly/raw");
 	});
 
+	test("traces ignores template placeholders when no sanitized fixtures exist", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, "evals", "traces", "sanitized"), { recursive: true });
+		await writeFile(join(cwd, "evals", "traces", "sanitized", ".gitkeep"), "");
+
+		const result = await dispatch(["traces"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("no sanitized evalfly traces found");
+		expect(result.stderr).not.toContain(".gitkeep");
+	});
+
 	test("traces refuses symlinked sanitized trace files", async () => {
 		const cwd = await makeProject();
 		await mkdir(join(cwd, "evals", "traces", "sanitized"), { recursive: true });

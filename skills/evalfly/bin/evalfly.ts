@@ -301,7 +301,9 @@ async function tracesCommand(cwd: string): Promise<DispatchResult> {
 	if (!tracesDir) {
 		throw new Error("no sanitized evalfly traces found");
 	}
-	const files = (await readdir(tracesDir)).sort();
+	const files = (await readdir(tracesDir))
+		.filter((file) => file !== ".gitkeep")
+		.sort();
 	if (files.length === 0) {
 		throw new Error("no sanitized evalfly traces found");
 	}
