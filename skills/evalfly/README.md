@@ -34,7 +34,7 @@ For a project that wants EvalFly evidence:
 2. Edit `evals/config.json` so the smoke suite covers the smallest deterministic regression that matters.
 3. Keep raw private traces under ignored `.pi/evalfly/raw/`; commit only minimized sanitized fixtures under `evals/traces/sanitized/`.
 4. Run `validate`, then `check --suite smoke --commit-range <base>..<head>` before citing EvalFly evidence in a PR or handoff.
-5. Cite `summary`, `latest`, or `list` output with the markdown report path. Do not claim EvalFly blocks merges unless the project explicitly wires `check` into its own workflow.
+5. Cite `summary`, `latest`, `list`, or `compare` output with the markdown report path. Use `compare <baseline-run-id> <after-run-id>` when a review needs baseline-to-after regression evidence. Do not claim EvalFly blocks merges unless the project explicitly wires `check` into its own workflow.
 
 ## Commands
 
