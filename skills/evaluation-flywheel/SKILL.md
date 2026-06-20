@@ -50,6 +50,7 @@ Run evals from the project root that owns the `evals/` directory. After installi
 ```bash
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts validate
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts run --suite smoke --commit-range main..HEAD
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts check --suite smoke --commit-range main..HEAD
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts report <run-id>
 ```
 
@@ -57,8 +58,10 @@ When developing this bundle itself, the repo-local `skills/evalfly/bin/evalfly.t
 
 Use `validate` before `run`. Treat `evals/reports/<run-id>.md` as the human-readable evidence artifact and `evals/runs/<run-id>.json` as the machine-readable record. Cite the report path, run id, suite, verdict, critical regression count, SpecSafe slice id, session id, and commit range when present.
 
-If a SpecSafe slice is open in `.pi/.specsafe-state.json`, `evalfly run` copies `currentSlice.id` and `currentSlice.sessionId` into the run/report by reference. Pass `--commit-range <range>` when the report should identify the reviewed commit span. Evalfly does not mutate `.pi/.specsafe-state.json`.
-Do not claim runtime enforcement. Evalfly reports evidence; it does not block commits, hooks, CI, or merges.
+Use `check --suite smoke --commit-range <range>` when you want an explicit local gate command. It runs the same deterministic suite, writes the same evidence, prints the report path, and exits nonzero on a failing verdict. Do not present `check` as ambient enforcement: it only gates a workflow that explicitly calls it.
+
+If a SpecSafe slice is open in `.pi/.specsafe-state.json`, `evalfly run` and `evalfly check` copy `currentSlice.id` and `currentSlice.sessionId` into the run/report by reference. Pass `--commit-range <range>` when the report should identify the reviewed commit span. Evalfly does not mutate `.pi/.specsafe-state.json`.
+Do not claim runtime enforcement. Evalfly reports evidence; it does not block commits, hooks, CI, or merges unless a project explicitly invokes `check` in its own workflow.
 
 ## Trace curation and privacy
 
