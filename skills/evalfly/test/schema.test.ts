@@ -252,6 +252,36 @@ describe("evalfly schema validation", () => {
 		}
 	});
 
+	test("human judge metadata requires a rubric and allows optional reviewer", () => {
+		const result = validateEvalCase({
+			...validCase,
+			judge: {
+				type: "human",
+				rubric: "Reviewer confirms the report cites the critical regression.",
+				reviewer: "maintainer",
+			},
+		});
+
+		expect(result.ok).toBe(true);
+	});
+
+	test("human judge metadata rejects missing rubric", () => {
+		const result = validateEvalCase({
+			...validCase,
+			judge: {
+				type: "human",
+				reviewer: "maintainer",
+			},
+		});
+
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.errors.join("\n")).toContain(
+				"judge.rubric must be a non-empty string",
+			);
+		}
+	});
+
 	test("run schema accepts optional SpecSafe linkage context", () => {
 		const run: EvalRun = {
 			schema_version: "evalfly.run.v1",

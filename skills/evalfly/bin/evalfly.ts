@@ -34,7 +34,7 @@ const UNSANITIZED_TRACE_PATTERNS = [
 ] as const;
 
 const USAGE =
-	"Usage: evalfly validate | run --suite smoke | check --suite smoke | latest | list | report <run-id> | curate-trace <raw-relative-path> <sanitized-name>";
+	"Usage: evalfly validate | run --suite smoke | check --suite smoke | latest | list | summary | traces | report <run-id> | curate-trace <raw-relative-path> <sanitized-name>";
 
 export type DispatchOptions = {
 	cwd?: string;
@@ -87,6 +87,12 @@ export async function dispatch(
 		}
 		if (command === "list") {
 			return await listCommand(cwd);
+		}
+		if (command === "summary") {
+			return await summaryCommand(cwd);
+		}
+		if (command === "traces") {
+			return await tracesCommand(cwd);
 		}
 		if (command === "report") {
 			return await reportCommand(args.slice(1), cwd);
@@ -238,6 +244,83 @@ async function listCommand(cwd: string): Promise<DispatchResult> {
 		lines.push(
 			`${run.created_at} ${run.run_id} ${run.verdict} ${run.suite} ${await canonicalReportPath(cwd, run.run_id)}`,
 		);
+	}
+	return {
+		exitCode: 0,
+		stdout: `${lines.join("\n")}\n`,
+		stderr: "",
+	};
+}
+
+async function summaryCommand(cwd: string): Promise<DispatchResult> {
+	const runs = await readSavedRuns(cwd);
+	let latest: EvalRun | undefined;
+	let passingRuns = 0;
+	let failingRuns = 0;
+	let criticalRegressions = 0;
+	for (const run of runs) {
+		if (run.verdict === "pass") {
+			passingRuns += 1;
+		} else {
+			failingRuns += 1;
+		}
+		criticalRegressions += run.summary.critical_regressions;
+		if (!latest || run.created_at > latest.created_at) {
+			latest = run;
+		}
+	}
+	if (!latest) {
+		throw new Error("no evalfly runs found");
+	}
+	const lines = [
+		"evalfly summary:",
+		`runs: ${runs.length}`,
+		`passing runs: ${passingRuns}`,
+		`failing runs: ${failingRuns}`,
+		`critical regressions: ${criticalRegressions}`,
+		`latest run: ${latest.run_id}`,
+		`latest verdict: ${latest.verdict}`,
+		`latest suite: ${latest.suite}`,
+		`latest report: ${await canonicalReportPath(cwd, latest.run_id)}`,
+		`latest spec slice: ${latest.context?.spec_slice ?? "not linked"}`,
+		`latest commit range: ${latest.context?.commit_range ?? "not linked"}`,
+	];
+	return {
+		exitCode: 0,
+		stdout: `${lines.join("\n")}\n`,
+		stderr: "",
+	};
+}
+
+async function tracesCommand(cwd: string): Promise<DispatchResult> {
+	const tracesDir = await readExactArtifactDir(cwd, [
+		"evals",
+		"traces",
+		"sanitized",
+	]);
+	if (!tracesDir) {
+		throw new Error("no sanitized evalfly traces found");
+	}
+	const files = (await readdir(tracesDir))
+		.filter((file) => file !== ".gitkeep")
+		.sort();
+	if (files.length === 0) {
+		throw new Error("no sanitized evalfly traces found");
+	}
+	const lines = ["sanitized evalfly traces:"];
+	for (const file of files) {
+		assertSafeTraceName(file);
+		const relativeTracePath = join("evals", "traces", "sanitized", file);
+		const tracePath = resolve(tracesDir, file);
+		const stat = await lstat(tracePath);
+		if (!stat.isFile() || stat.isSymbolicLink()) {
+			throw new Error(`unsafe sanitized trace: ${relativeTracePath}`);
+		}
+		const realTracePath = await realpath(tracePath);
+		if (realTracePath !== tracePath) {
+			throw new Error(`unsafe sanitized trace: ${relativeTracePath}`);
+		}
+		lines.push(`${relativeTracePath} bytes: ${stat.size}`);
 	}
 	return {
 		exitCode: 0,
