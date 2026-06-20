@@ -251,4 +251,49 @@ describe("[unit] bootstrap skill", () => {
 		expect(readText("AGENTS.md")).toBe("USER MODIFIED");
 		expect(readText("CLAUDE.md")).toBe("USER MODIFIED");
 	});
+
+	test("C12 --with-evalfly dry-run previews evals template copy without mutating", () => {
+		const result = runBootstrap(["--with-evalfly"]);
+
+		expect(result.status).toBe(0);
+		expectActionPreview(result.stdout, "would copy EvalFly evals template");
+		expect(fs.existsSync(path.join(tempDir, "evals"))).toBe(false);
+	});
+
+	test("C13 --with-evalfly apply copies the EvalFly evals template", () => {
+		const result = applyBootstrap("--with-evalfly");
+
+		expect(result.status).toBe(0);
+		expect(result.stdout).toContain("copied EvalFly evals template");
+		expect(fs.existsSync(path.join(tempDir, "evals", "config.json"))).toBe(
+			true,
+		);
+		expect(
+			fs.existsSync(path.join(tempDir, "evals", "cases", "example-smoke.json")),
+		).toBe(true);
+		expect(
+			fs.existsSync(path.join(tempDir, "evals", "traces", "sanitized")),
+		).toBe(true);
+
+		const entry = JSON.parse(auditLogLines()[0]!) as { applied?: unknown };
+		expect(entry.applied).toContain("evals");
+	});
+
+	test("C14 --with-evalfly preserves an existing evals directory", () => {
+		fs.mkdirSync(path.join(tempDir, "evals"), { recursive: true });
+		fs.writeFileSync(path.join(tempDir, "evals", "config.json"), "USER CONFIG");
+
+		const result = applyBootstrap("--with-evalfly");
+
+		expect(result.status).toBe(0);
+		expect(result.stdout).toContain("evals exists — skipping EvalFly template");
+		expect(readText("evals/config.json")).toBe("USER CONFIG");
+	});
+
+	test("C15 EvalFly template copy is fail-closed if the destination appears after planning", () => {
+		const source = fs.readFileSync(bootstrapBin, "utf-8");
+
+		expect(source).toContain("errorOnExist: true");
+		expect(source).toContain("force: false");
+	});
 });

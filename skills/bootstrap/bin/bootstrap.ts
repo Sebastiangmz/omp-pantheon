@@ -8,6 +8,8 @@
  *   bun run .omp/skills/bootstrap/bin/bootstrap.ts                # dry-run
  *   bun run .omp/skills/bootstrap/bin/bootstrap.ts --i-approve    # apply
  *   bun run .omp/skills/bootstrap/bin/bootstrap.ts --i-approve --force-symlink
+ *   bun run .omp/skills/bootstrap/bin/bootstrap.ts --with-evalfly          # preview evals/ template copy
+ *   bun run .omp/skills/bootstrap/bin/bootstrap.ts --i-approve --with-evalfly
  *
  * Exit codes:
  *   0  success or successful dry-run (including idempotent no-op)
@@ -44,6 +46,7 @@ const GITIGNORE_PATTERNS = [
 type Opts = {
 	iApprove: boolean;
 	forceSymlink: boolean;
+	withEvalfly: boolean;
 };
 
 function fail(message: string, code: number): never {
@@ -52,10 +55,15 @@ function fail(message: string, code: number): never {
 }
 
 function parseArgs(argv: string[]): Opts {
-	const opts: Opts = { iApprove: false, forceSymlink: false };
+	const opts: Opts = {
+		iApprove: false,
+		forceSymlink: false,
+		withEvalfly: false,
+	};
 	for (const arg of argv) {
 		if (arg === "--i-approve") opts.iApprove = true;
 		else if (arg === "--force-symlink") opts.forceSymlink = true;
+		else if (arg === "--with-evalfly") opts.withEvalfly = true;
 		else fail(`error: unknown flag: ${arg}`, 2);
 	}
 	return opts;
@@ -89,6 +97,8 @@ type Plan = {
 	agentsExists: boolean;
 	claudeExists: boolean;
 	gitignoreMissing: string[];
+	evalsExists: boolean;
+	withEvalfly: boolean;
 	hasMutations: boolean;
 };
 
@@ -115,6 +125,7 @@ function computePlan(cwd: string, opts: Opts): Plan {
 
 	const agentsExists = fs.existsSync(path.join(cwd, "AGENTS.md"));
 	const claudeExists = fs.existsSync(path.join(cwd, "CLAUDE.md"));
+	const evalsExists = fs.existsSync(path.join(cwd, "evals"));
 
 	let existingGitignore = "";
 	try {
@@ -133,6 +144,7 @@ function computePlan(cwd: string, opts: Opts): Plan {
 		symlinkAction === "force-replace" ||
 		!agentsExists ||
 		!claudeExists ||
+		(opts.withEvalfly && !evalsExists) ||
 		gitignoreMissing.length > 0;
 
 	return {
@@ -140,6 +152,8 @@ function computePlan(cwd: string, opts: Opts): Plan {
 		symlinkAction,
 		agentsExists,
 		claudeExists,
+		evalsExists,
+		withEvalfly: opts.withEvalfly,
 		gitignoreMissing,
 		hasMutations,
 	};
@@ -181,6 +195,13 @@ function previewMode(cwd: string, plan: Plan, out: NodeJS.WriteStream): number {
 	}
 	if (!plan.agentsExists) out.write("would write AGENTS.md\n");
 	if (!plan.claudeExists) out.write("would write CLAUDE.md\n");
+	if (plan.withEvalfly) {
+		if (plan.evalsExists) {
+			out.write("evals exists — skipping EvalFly template\n");
+		} else {
+			out.write("would copy EvalFly evals template\n");
+		}
+	}
 	if (plan.gitignoreMissing.length > 0) {
 		out.write(
 			`would update .gitignore (${plan.gitignoreMissing.length} patterns)\n`,
@@ -248,7 +269,23 @@ function applyMode(
 		applied.push("CLAUDE.md");
 	}
 
-	// (e) .gitignore
+	// (e) optional EvalFly template
+	const evalsPath = path.join(cwd, "evals");
+	if (opts.withEvalfly) {
+		if (plan.evalsExists) {
+			out.write("evals exists — skipping EvalFly template\n");
+		} else {
+			fs.cpSync(
+				path.join(PI_SESHAT_ROOT, "skills", "evalfly", "templates", "evals"),
+				evalsPath,
+				{ recursive: true, errorOnExist: true, force: false },
+			);
+			out.write("copied EvalFly evals template\n");
+			applied.push("evals");
+		}
+	}
+
+	// (f) .gitignore
 	if (plan.gitignoreMissing.length > 0) {
 		const giPath = path.join(cwd, ".gitignore");
 		let existing = "";
