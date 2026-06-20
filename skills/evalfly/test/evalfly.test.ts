@@ -682,6 +682,87 @@ describe("evalfly CLI", () => {
 		expect(result.stdout).not.toContain("/Users/sebastian");
 	});
 
+	test("summary prints aggregate evidence and latest context", async () => {
+		const cwd = await makeProject();
+		await writeFile(join(cwd, "expected.txt"), "ok");
+		await dispatch(["run", "--suite", "smoke"], {
+			cwd,
+			now: () => new Date("2026-06-19T12:00:00.000Z"),
+			runId: "run-pass",
+		});
+		await rm(join(cwd, "expected.txt"));
+		await dispatch(
+			["run", "--suite", "smoke", "--commit-range", "main..HEAD"],
+			{
+				cwd,
+				now: () => new Date("2026-06-20T12:00:00.000Z"),
+				runId: "run-fail",
+			},
+		);
+
+		const result = await dispatch(["summary"], { cwd });
+
+		expect(result.exitCode).toBe(0);
+		expect(result.stderr).toBe("");
+		expect(result.stdout).toContain("evalfly summary:");
+		expect(result.stdout).toContain("runs: 2");
+		expect(result.stdout).toContain("passing runs: 1");
+		expect(result.stdout).toContain("failing runs: 1");
+		expect(result.stdout).toContain("critical regressions: 1");
+		expect(result.stdout).toContain("latest run: run-fail");
+		expect(result.stdout).toContain("latest verdict: fail");
+		expect(result.stdout).toContain("latest report: evals/reports/run-fail.md");
+		expect(result.stdout).toContain("latest commit range: main..HEAD");
+		expect(result.stdout).not.toContain("/Users/sebastian");
+	});
+
+	test("traces lists sanitized trace fixtures without reading raw traces", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, "evals", "traces", "sanitized"), { recursive: true });
+		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });
+		await writeFile(
+			join(cwd, "evals", "traces", "sanitized", "alpha.json"),
+			'{"ok":true}\n',
+		);
+		await writeFile(
+			join(cwd, "evals", "traces", "sanitized", "beta.txt"),
+			"beta\n",
+		);
+		await writeFile(
+			join(cwd, ".pi", "evalfly", "raw", "secret.txt"),
+			"secret@example.com\n",
+		);
+
+		const result = await dispatch(["traces"], { cwd });
+
+		expect(result.exitCode).toBe(0);
+		expect(result.stderr).toBe("");
+		expect(result.stdout).toContain("sanitized evalfly traces:");
+		expect(result.stdout).toContain("evals/traces/sanitized/alpha.json");
+		expect(result.stdout).toContain("evals/traces/sanitized/beta.txt");
+		expect(result.stdout).toContain("bytes:");
+		expect(result.stdout).not.toContain("secret");
+		expect(result.stdout).not.toContain(".pi/evalfly/raw");
+	});
+
+	test("traces refuses symlinked sanitized trace files", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, "evals", "traces", "sanitized"), { recursive: true });
+		const outsideDir = await mkdtemp(join(tmpdir(), "evalfly-trace-outside-"));
+		await writeFile(join(outsideDir, "outside.txt"), "private\n");
+		await symlink(
+			join(outsideDir, "outside.txt"),
+			join(cwd, "evals", "traces", "sanitized", "outside.txt"),
+		);
+
+		const result = await dispatch(["traces"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain(
+			"unsafe sanitized trace: evals/traces/sanitized/outside.txt",
+		);
+	});
+
 	test("list rejects malformed saved run records instead of hiding them", async () => {
 		const cwd = await makeProject();
 		await mkdir(join(cwd, "evals", "runs"), { recursive: true });
