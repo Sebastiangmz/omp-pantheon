@@ -90,11 +90,17 @@ Link eval evidence from SpecSafe by reference, not by embedding reports into the
 
 Keep SpecSafe state focused on slice lifecycle. Do not add eval payloads, raw traces, or external memory dependencies to `.pi/.specsafe-state.json`.
 
+## Optional advisory hook
+
+The bundled `evalfly-advisor` extension hook is inactive by default. A project opts in by creating `.pi/evalfly/hints-enabled` and `evals/config.json`. When enabled, the hook injects non-blocking first-turn context reminding the agent to cite EvalFly evidence or explain why it is not applicable.
+
+This hook never runs evals, never captures traces, never blocks completion, and never turns EvalFly into CI or merge enforcement.
+
 ## Current limits
 
 The contract MVP intentionally provides evidence tooling only:
 
-- No global hook enforcement.
+- No global hook enforcement. The optional `evalfly-advisor` hook is reminder-only and opt-in.
 - No CI gate.
 - No required LLM-as-judge.
 - No automatic raw trace capture.

@@ -36,9 +36,13 @@ the Seshat/SpecSafe runtime into the local harness.
 - Seshat/SpecSafe: `bootstrap`, `coherence`, `docs`, `env-doctor`,
   `evaluation-flywheel`, `github`, `latest-docs`, `linear`, `push`, `specsafe`.
 - EvalFly: opt-in templates and CLI under `skills/evalfly/` for deterministic
-  validation/run/report evidence; it is not registered as a hook or CI gate.
+  validation/run/report/trace-curation evidence; the bundled `evalfly-advisor`
+  hook is inactive unless a project has both `.pi/evalfly/hints-enabled` and
+  `evals/config.json`, and it only adds non-blocking reminder context.
 
 ### Hooks
+- Extension hooks: `todo-enforcer`, opt-in `evalfly-advisor`, `comment-checker`,
+  `intent-gate`.
 - Agent hooks: `specsafe-session`, `specsafe-subagents`, `i-approve`,
   `fallback-audit`.
 
