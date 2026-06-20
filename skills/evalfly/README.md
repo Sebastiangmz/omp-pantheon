@@ -22,7 +22,7 @@ evals/
   traces/sanitized/.gitkeep
 ```
 
-The optional GitHub Actions example lives at `skills/evalfly/templates/github-actions/evalfly-check.yml`. It is deliberately manual (`workflow_dispatch`) and `continue-on-error: true`; copy it only into a repository that vendors `skills/evalfly/` and wants advisory CI evidence.
+Two optional GitHub Actions templates live under `skills/evalfly/templates/github-actions/`. `evalfly-check.yml` is deliberately manual (`workflow_dispatch`) and `continue-on-error: true`; copy it only into a repository that vendors `skills/evalfly/` and wants advisory CI evidence. `evalfly-required-gate.yml` is a blocking pull-request template; copy it only after the project intentionally chooses EvalFly as a required check and then configure branch protection to require `EvalFly required gate`.
 
 `evals/config.json` is the file read by the evalfly CLI. Keep any standalone files in `evals/cases/` synchronized with the cases embedded in `config.json` until a later loader supports case discovery.
 
@@ -34,7 +34,7 @@ For a project that wants EvalFly evidence:
 2. Edit `evals/config.json` so the smoke suite covers the smallest deterministic regression that matters.
 3. Keep raw private traces under ignored `.pi/evalfly/raw/`; commit only minimized sanitized fixtures under `evals/traces/sanitized/`.
 4. Run `validate`, then `check --suite smoke --commit-range <base>..<head>` before citing EvalFly evidence in a PR or handoff.
-5. Cite `summary`, `latest`, `list`, or `compare` output with the markdown report path. Use `compare <baseline-run-id> <after-run-id>` when a review needs baseline-to-after regression evidence. Do not claim EvalFly blocks merges unless the project explicitly wires `check` into its own workflow.
+5. Cite `summary`, `latest`, `list`, or `compare` output with the markdown report path. Use `compare <baseline-run-id> <after-run-id>` when a review needs baseline-to-after regression evidence. Do not claim EvalFly blocks merges unless the project explicitly copies the required-gate workflow or otherwise wires `check` into its own protected workflow.
 
 ## Commands
 
@@ -97,4 +97,4 @@ Use `curate-trace` only after you have manually minimized the trace to the small
 
 ## Current scope
 
-Evalfly is evidence tooling, not enforcement. The contract MVP does not add CI gates, blocking hook enforcement, automatic raw trace capture, required LLM-as-judge execution, or external-memory dependencies. The optional `evalfly-advisor` extension hook is inactive unless a project opts in with `.pi/evalfly/hints-enabled` and `evals/config.json`; it only injects non-blocking reminder context.
+Evalfly is evidence tooling, not ambient enforcement. The contract MVP does not install CI gates, blocking hook enforcement, automatic raw trace capture, required LLM-as-judge execution, or external-memory dependencies. Projects that deliberately want CI enforcement can copy `templates/github-actions/evalfly-required-gate.yml` and configure branch protection themselves. The optional `evalfly-advisor` extension hook is inactive unless a project opts in with `.pi/evalfly/hints-enabled` and `evals/config.json`; it only injects non-blocking reminder context.

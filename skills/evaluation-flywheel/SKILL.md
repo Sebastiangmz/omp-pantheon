@@ -79,7 +79,7 @@ Use `compare <baseline-run-id> <after-run-id>` when a review needs baseline-to-a
 Use `normalize-trace <raw-relative-path> <sanitized-name>` when a raw JSONL trace under `.pi/evalfly/raw/` should become committed review evidence. It writes `evals/traces/sanitized/<sanitized-name>` with whitelisted metadata (`trace_id`, `slice_id`, agent/model/tool/cost/latency/verdict) and explicit `sanitized_input` / `sanitized_output` fields only. Raw `input`, `output`, and `content` are dropped; this is normalization, not a privacy proof.
 
 If a SpecSafe slice is open in `.pi/.specsafe-state.json`, `evalfly run` and `evalfly check` copy `currentSlice.id` and `currentSlice.sessionId` into the run/report by reference. Pass `--commit-range <range>` when the report should identify the reviewed commit span. Evalfly does not mutate `.pi/.specsafe-state.json`.
-Do not claim runtime enforcement. Evalfly reports evidence; it does not block commits, hooks, CI, or merges unless a project explicitly invokes `check` in its own workflow.
+Do not claim runtime enforcement. Evalfly reports evidence; it does not block commits, hooks, CI, or merges unless a project explicitly invokes `check` in its own workflow or deliberately copies the required-gate template and protects that check.
 
 ## Trace curation and privacy
 
@@ -132,7 +132,7 @@ The bundled GitHub Actions example at `skills/evalfly/templates/github-actions/e
 The contract MVP intentionally provides evidence tooling only:
 
 - No global hook enforcement. The optional `evalfly-advisor` hook is reminder-only and opt-in.
-- No mandatory CI gate. The optional GitHub Actions example is advisory unless a project deliberately makes it required.
+- No installed mandatory CI gate. The optional advisory workflow stays non-blocking, and the optional required-gate template only blocks after a project copies it and configures branch protection.
 - No required LLM-as-judge. LLM judge metadata is experimental/advisory and not executed by Evalfly.
 - No automatic raw trace capture.
 - No mutation of existing project state during bootstrap.
