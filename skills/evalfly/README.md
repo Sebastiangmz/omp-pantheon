@@ -58,6 +58,10 @@ bun run skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitize
 - `report <run-id>` regenerates the markdown report from a saved run JSON.
 - `curate-trace <raw-relative-path> <sanitized-name>` copies a local trace from ignored `.pi/evalfly/raw/` into `evals/traces/sanitized/` only after deterministic checks for path safety and obvious unsanitized content. It does not capture traces and does not redact automatically.
 
+## Experimental judge metadata
+
+`judge.type: "llm"` is schema-valid only with a non-empty `rubric` and optional `model`. Evalfly records LLM-judge cases as unsupported at runtime; it does not call models, require LLM judges, or treat them as enforcement.
+
 ## Privacy boundary
 
 Do not version raw traces. Keep raw local material in ignored `.pi/evalfly/raw/`. Commit only sanitized fixtures under `evals/traces/sanitized/`, and mark cases as `privacy.sanitized: true` only after removing secrets, credentials, user identifiers, private URLs, and unnecessary payloads.
@@ -66,4 +70,4 @@ Use `curate-trace` only after you have manually minimized the trace to the small
 
 ## Current scope
 
-Evalfly is evidence tooling, not enforcement. The contract MVP does not add CI gates, blocking hook enforcement, automatic raw trace capture, LLM-judge requirements, or external-memory dependencies. The optional `evalfly-advisor` extension hook is inactive unless a project opts in with `.pi/evalfly/hints-enabled` and `evals/config.json`; it only injects non-blocking reminder context.
+Evalfly is evidence tooling, not enforcement. The contract MVP does not add CI gates, blocking hook enforcement, automatic raw trace capture, required LLM-as-judge execution, or external-memory dependencies. The optional `evalfly-advisor` extension hook is inactive unless a project opts in with `.pi/evalfly/hints-enabled` and `evals/config.json`; it only injects non-blocking reminder context.

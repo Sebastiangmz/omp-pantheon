@@ -96,6 +96,10 @@ Link eval evidence from SpecSafe by reference, not by embedding reports into the
 
 Keep SpecSafe state focused on slice lifecycle. Do not add eval payloads, raw traces, or external memory dependencies to `.pi/.specsafe-state.json`.
 
+## Experimental LLM judge metadata
+
+LLM judge cases may be described with `judge: { "type": "llm", "rubric": "...", "model": "optional" }` for future/advisory review design. Evalfly validates that metadata but does not execute LLM judges; `evalfly run` records them as unsupported. Prefer deterministic assertions whenever possible.
+
 ## Optional advisory hook
 
 The bundled `evalfly-advisor` extension hook is inactive by default. A project opts in by creating `.pi/evalfly/hints-enabled` and `evals/config.json`. When enabled, the hook injects non-blocking first-turn context reminding the agent to cite EvalFly evidence or explain why it is not applicable.
@@ -110,7 +114,7 @@ The contract MVP intentionally provides evidence tooling only:
 
 - No global hook enforcement. The optional `evalfly-advisor` hook is reminder-only and opt-in.
 - No mandatory CI gate. The optional GitHub Actions example is advisory unless a project deliberately makes it required.
-- No required LLM-as-judge.
+- No required LLM-as-judge. LLM judge metadata is experimental/advisory and not executed by Evalfly.
 - No automatic raw trace capture.
 - No mutation of existing project state during bootstrap.
 - No external-memory dependency.

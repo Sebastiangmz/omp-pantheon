@@ -2,7 +2,7 @@
 
 Keep rubrics small, explicit, and tied to the case they judge.
 
-For PR 1, prefer deterministic cases in `evals/config.json`. Use this directory only for human-review notes or future LLM-judge rubrics that cannot be reduced to deterministic assertions.
+Prefer deterministic cases in `evals/config.json`. Use this directory only for human-review notes or experimental LLM-judge rubrics that cannot be reduced to deterministic assertions; Evalfly validates LLM judge metadata but does not execute model calls.
 
 A good rubric states:
 
