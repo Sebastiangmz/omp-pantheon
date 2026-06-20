@@ -52,6 +52,7 @@ bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts compare <baseline-run-id> <af
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts report <run-id>
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitized-name>
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts normalize-trace <raw-relative-path> <sanitized-name>
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts import-session-trace <raw-relative-path> <sanitized-name>
 ```
 
 When developing this bundle itself, the repo-local path also works:
@@ -68,6 +69,7 @@ bun run skills/evalfly/bin/evalfly.ts traces
 bun run skills/evalfly/bin/evalfly.ts compare <baseline-run-id> <after-run-id>
 bun run skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitized-name>
 bun run skills/evalfly/bin/evalfly.ts normalize-trace <raw-relative-path> <sanitized-name>
+bun run skills/evalfly/bin/evalfly.ts import-session-trace <raw-relative-path> <sanitized-name>
 ```
 
 - `validate` checks `evals/config.json` against the current schema.
@@ -82,6 +84,7 @@ bun run skills/evalfly/bin/evalfly.ts normalize-trace <raw-relative-path> <sanit
 - `report <run-id>` regenerates the markdown report from a saved run JSON.
 - `curate-trace <raw-relative-path> <sanitized-name>` copies a local trace from ignored `.pi/evalfly/raw/` into `evals/traces/sanitized/` only after deterministic checks for path safety and obvious unsanitized content. It does not capture traces and does not redact automatically.
 - `normalize-trace <raw-relative-path> <sanitized-name>` reads local JSONL from ignored `.pi/evalfly/raw/`, writes a normalized JSON trace under `evals/traces/sanitized/`, and whitelists only trace metadata plus `sanitized_input` / `sanitized_output`. It drops raw `input`, `output`, and `content` fields instead of redacting them.
+- `import-session-trace <raw-relative-path> <sanitized-name>` reads a sanitized session JSON object from ignored `.pi/evalfly/raw/`, maps `messages[]` and `tool_calls[]` into the same normalized trace schema, preserves safe `trace_id`, `session_id`, `slice_id`, agent/model/tool/cost/latency/verdict metadata, and drops raw `input`, `output`, and `content` fields.
 
 ## Experimental judge metadata
 

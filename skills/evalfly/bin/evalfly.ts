@@ -34,7 +34,7 @@ const UNSANITIZED_TRACE_PATTERNS = [
 ] as const;
 
 const USAGE =
-	"Usage: evalfly validate | run --suite smoke | check --suite smoke | latest | list | summary | traces | compare <baseline-run-id> <after-run-id> | report <run-id> | curate-trace <raw-relative-path> <sanitized-name> | normalize-trace <raw-relative-path> <sanitized-name>";
+	"Usage: evalfly validate | run --suite smoke | check --suite smoke | latest | list | summary | traces | compare <baseline-run-id> <after-run-id> | report <run-id> | curate-trace <raw-relative-path> <sanitized-name> | normalize-trace <raw-relative-path> <sanitized-name> | import-session-trace <raw-relative-path> <sanitized-name>";
 
 export type DispatchOptions = {
 	cwd?: string;
@@ -105,6 +105,9 @@ export async function dispatch(
 		}
 		if (command === "normalize-trace") {
 			return await normalizeTraceCommand(args.slice(1), cwd);
+		}
+		if (command === "import-session-trace") {
+			return await importSessionTraceCommand(args.slice(1), cwd);
 		}
 		return {
 			exitCode: 1,
@@ -516,6 +519,50 @@ async function normalizeTraceCommand(
 	const normalizedTrace = normalizeTraceJsonl(
 		await readFile(rawTracePath, "utf8"),
 	);
+	return await writeSanitizedTrace(
+		cwd,
+		sanitizedName,
+		normalizedTrace,
+		"normalized",
+	);
+}
+
+async function importSessionTraceCommand(
+	args: string[],
+	cwd: string,
+): Promise<DispatchResult> {
+	const [rawPath, sanitizedName] = args;
+	if (!rawPath || !sanitizedName) {
+		return {
+			exitCode: 1,
+			stdout: "",
+			stderr:
+				"import-session-trace requires <raw-relative-path> <sanitized-name>\n",
+		};
+	}
+	assertSafeRelativePath("raw trace path", rawPath);
+	assertSafeTraceName(sanitizedName);
+	const rawTracePath = await boundedPath(
+		cwd,
+		[".pi", "evalfly", "raw"],
+		rawPath,
+	);
+	const rawSession = parseRawSessionTrace(await readFile(rawTracePath, "utf8"));
+	const normalizedTrace = importSessionTrace(rawSession);
+	return await writeSanitizedTrace(
+		cwd,
+		sanitizedName,
+		normalizedTrace,
+		"imported",
+	);
+}
+
+async function writeSanitizedTrace(
+	cwd: string,
+	sanitizedName: string,
+	normalizedTrace: Record<string, unknown>,
+	action: "normalized" | "imported",
+): Promise<DispatchResult> {
 	const content = `${JSON.stringify(normalizedTrace, null, 2)}\n`;
 	assertSanitizedTrace(content);
 	const targetDir = await ensureSanitizedTraceDir(cwd);
@@ -537,18 +584,88 @@ async function normalizeTraceCommand(
 	await writeFile(targetPath, content, { flag: "wx" });
 	return {
 		exitCode: 0,
-		stdout: `evalfly trace normalized: ${join("evals", "traces", "sanitized", sanitizedName)}\n`,
+		stdout: `evalfly trace ${action}: ${join("evals", "traces", "sanitized", sanitizedName)}\n`,
 		stderr: "",
 	};
+}
+
+function parseRawSessionTrace(content: string): Record<string, unknown> {
+	try {
+		const parsed: unknown = JSON.parse(content);
+		if (!isRecord(parsed)) {
+			throw new Error("expected object");
+		}
+		return parsed;
+	} catch {
+		throw new Error("invalid raw session trace: expected JSON object");
+	}
+}
+
+function importSessionTrace(
+	session: Record<string, unknown>,
+): Record<string, unknown> {
+	const traceId = optionalTraceLine("trace_id", session.trace_id);
+	const sessionId = optionalTraceLine("session_id", session.session_id);
+	const sliceId = optionalTraceLine("slice_id", session.slice_id);
+	const baseAgent = optionalTraceLine("agent", session.agent);
+	const baseModel = optionalTraceLine("model", session.model);
+	const events: Record<string, unknown>[] = [];
+	appendSessionEvents(
+		events,
+		session.messages,
+		"message",
+		baseAgent,
+		baseModel,
+	);
+	appendSessionEvents(
+		events,
+		session.tool_calls,
+		"tool_call",
+		baseAgent,
+		baseModel,
+	);
+	if (events.length === 0) {
+		throw new Error("raw session trace has no messages or tool_calls");
+	}
+	return buildNormalizedTrace({ traceId, sessionId, sliceId, events });
+}
+
+function appendSessionEvents(
+	events: Record<string, unknown>[],
+	value: unknown,
+	type: "message" | "tool_call",
+	baseAgent: string | undefined,
+	baseModel: string | undefined,
+): void {
+	if (value === undefined || value === null) {
+		return;
+	}
+	if (!Array.isArray(value)) {
+		throw new Error(
+			`${type === "message" ? "messages" : "tool_calls"} must be an array`,
+		);
+	}
+	for (const item of value) {
+		if (!isRecord(item)) {
+			throw new Error(
+				`${type === "message" ? "messages" : "tool_calls"} entries must be objects`,
+			);
+		}
+		const merged: Record<string, unknown> = { ...item, type };
+		if (baseAgent && merged.agent === undefined) {
+			merged.agent = baseAgent;
+		}
+		if (baseModel && merged.model === undefined) {
+			merged.model = baseModel;
+		}
+		events.push(normalizeTraceEvent(merged));
+	}
 }
 
 function normalizeTraceJsonl(content: string): Record<string, unknown> {
 	const events: Record<string, unknown>[] = [];
 	let traceId: string | undefined;
 	let sliceId: string | undefined;
-	let totalCostUsd = 0;
-	let totalLatencyMs = 0;
-	let toolCalls = 0;
 	const lines = content
 		.split(/\r?\n/)
 		.map((line) => line.trim())
@@ -585,6 +702,21 @@ function normalizeTraceJsonl(content: string): Record<string, unknown> {
 			sliceId = eventSliceId;
 		}
 		const event = normalizeTraceEvent(parsed);
+		events.push(event);
+	}
+	return buildNormalizedTrace({ traceId, sliceId, events });
+}
+
+function buildNormalizedTrace(input: {
+	traceId?: string;
+	sessionId?: string;
+	sliceId?: string;
+	events: Record<string, unknown>[];
+}): Record<string, unknown> {
+	let totalCostUsd = 0;
+	let totalLatencyMs = 0;
+	let toolCalls = 0;
+	for (const event of input.events) {
 		if (event.type === "tool_call") {
 			toolCalls += 1;
 		}
@@ -594,15 +726,15 @@ function normalizeTraceJsonl(content: string): Record<string, unknown> {
 		if (typeof event.latency_ms === "number") {
 			totalLatencyMs += event.latency_ms;
 		}
-		events.push(event);
 	}
 	return {
 		schema_version: "evalfly.trace.v1",
-		...(traceId ? { trace_id: traceId } : {}),
-		...(sliceId ? { slice_id: sliceId } : {}),
-		events,
+		...(input.traceId ? { trace_id: input.traceId } : {}),
+		...(input.sessionId ? { session_id: input.sessionId } : {}),
+		...(input.sliceId ? { slice_id: input.sliceId } : {}),
+		events: input.events,
 		summary: {
-			events: events.length,
+			events: input.events.length,
 			tool_calls: toolCalls,
 			total_cost_usd: Number(totalCostUsd.toFixed(6)),
 			total_latency_ms: totalLatencyMs,
