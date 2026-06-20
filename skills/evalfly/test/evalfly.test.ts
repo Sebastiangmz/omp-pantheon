@@ -1775,6 +1775,129 @@ describe("evalfly CLI", () => {
 			),
 		).toBe("sentinel\n");
 	});
+
+	test("import-session-trace maps sanitized session metadata into a normalized trace", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });
+		await writeFile(
+			join(cwd, ".pi", "evalfly", "raw", "session.json"),
+			`${JSON.stringify(
+				{
+					trace_id: "trace-session",
+					session_id: "session-123",
+					slice_id: "EVALFLY-38",
+					agent: "implementer",
+					model: "gpt-5.5",
+					messages: [
+						{
+							role: "assistant",
+							content: "raw assistant content that must be dropped",
+							sanitized_input: "Implement required EvalFly behavior",
+							sanitized_output: "Reported evals/reports/run-smoke.md",
+							latency_ms: 1100,
+							cost_usd: 0.0123456,
+							verdict: "pass",
+						},
+					],
+					tool_calls: [
+						{
+							tool_name: "bash",
+							status: "success",
+							output: "raw command output that must be dropped",
+							sanitized_input: "bun test skills/evalfly/test/evalfly.test.ts",
+							sanitized_output: "62 pass, 0 fail",
+							latency_ms: 250,
+						},
+					],
+				},
+				null,
+				2,
+			)}\n`,
+		);
+
+		const result = await dispatch(
+			["import-session-trace", "session.json", "session-normalized.json"],
+			{ cwd },
+		);
+
+		expect(result.exitCode).toBe(0);
+		expect(result.stdout).toContain(
+			"evals/traces/sanitized/session-normalized.json",
+		);
+		const imported = JSON.parse(
+			await readFile(
+				join(cwd, "evals", "traces", "sanitized", "session-normalized.json"),
+				"utf8",
+			),
+		);
+		expect(imported).toEqual({
+			schema_version: "evalfly.trace.v1",
+			trace_id: "trace-session",
+			session_id: "session-123",
+			slice_id: "EVALFLY-38",
+			events: [
+				{
+					type: "message",
+					agent: "implementer",
+					model: "gpt-5.5",
+					role: "assistant",
+					sanitized_input: "Implement required EvalFly behavior",
+					sanitized_output: "Reported evals/reports/run-smoke.md",
+					latency_ms: 1100,
+					cost_usd: 0.0123456,
+					verdict: "pass",
+				},
+				{
+					type: "tool_call",
+					agent: "implementer",
+					model: "gpt-5.5",
+					tool_name: "bash",
+					status: "success",
+					sanitized_input: "bun test skills/evalfly/test/evalfly.test.ts",
+					sanitized_output: "62 pass, 0 fail",
+					latency_ms: 250,
+				},
+			],
+			summary: {
+				events: 2,
+				tool_calls: 1,
+				total_cost_usd: 0.012346,
+				total_latency_ms: 1350,
+			},
+		});
+		const importedText = JSON.stringify(imported);
+		expect(importedText).not.toContain("raw assistant content");
+		expect(importedText).not.toContain("raw command output");
+	});
+
+	test("import-session-trace hides malformed raw session content in stderr", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });
+		await writeFile(
+			join(cwd, ".pi", "evalfly", "raw", "broken-session.json"),
+			'{"trace_id":"trace-session","content":"SECRET_SESSION_TRACE_TOKEN"\n',
+		);
+
+		const result = await dispatch(
+			[
+				"import-session-trace",
+				"broken-session.json",
+				"session-normalized.json",
+			],
+			{ cwd },
+		);
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain(
+			"invalid raw session trace: expected JSON object",
+		);
+		expect(result.stderr).not.toContain("SECRET_SESSION_TRACE_TOKEN");
+		await expect(
+			readFile(
+				join(cwd, "evals", "traces", "sanitized", "session-normalized.json"),
+			),
+		).rejects.toThrow();
+	});
 	test("curate-trace refuses unsafe sanitized trace names", async () => {
 		const cwd = await makeProject();
 		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });
