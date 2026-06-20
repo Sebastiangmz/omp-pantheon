@@ -142,7 +142,7 @@ export const EvalRunSchema = Type.Object(
 		run_id: nonEmptyString,
 		suite: EvalSuiteSchema,
 		config_name: nonEmptyString,
-		created_at: nonEmptyString,
+		created_at: Type.String({ minLength: 1, format: "date-time" }),
 		context: Type.Optional(EvalRunContextSchema),
 		results: Type.Array(EvalRunResultSchema),
 		summary: EvalRunSummarySchema,
@@ -311,7 +311,7 @@ export function validateEvalRun(value: unknown): ValidationResult<EvalRun> {
 	requireString(value, "run_id", errors);
 	requireOneOf(value, "suite", EVAL_SUITES, errors);
 	requireString(value, "config_name", errors);
-	requireString(value, "created_at", errors);
+	requireIsoTimestamp(value, "created_at", errors);
 	if (value.context !== undefined) {
 		validateRunContext(value.context, "context", errors);
 	}
@@ -562,6 +562,23 @@ function requireString(
 	const field = fieldName(path);
 	if (typeof value[field] !== "string" || value[field].length === 0) {
 		errors.push(`${path} must be a non-empty string`);
+	}
+}
+
+function requireIsoTimestamp(
+	value: Record<string, unknown>,
+	path: string,
+	errors: ErrorSink,
+): void {
+	const field = fieldName(path);
+	const timestamp = value[field];
+	if (typeof timestamp !== "string" || timestamp.length === 0) {
+		errors.push(`${path} must be a non-empty string`);
+		return;
+	}
+	const parsed = new Date(timestamp);
+	if (Number.isNaN(parsed.getTime()) || parsed.toISOString() !== timestamp) {
+		errors.push(`${path} must be an ISO timestamp`);
 	}
 }
 

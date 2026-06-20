@@ -248,6 +248,31 @@ describe("evalfly schema validation", () => {
 		expect(validateEvalRun(run)).toEqual({ ok: true, value: run });
 	});
 
+	test("run schema rejects non-ISO created_at values", () => {
+		const result = validateEvalRun({
+			schema_version: "evalfly.run.v1",
+			run_id: "run-with-bad-date",
+			suite: "smoke",
+			config_name: validConfig.name,
+			created_at: "zz",
+			results: [],
+			summary: {
+				total: 0,
+				passed: 0,
+				failed: 0,
+				critical_regressions: 0,
+			},
+			verdict: "pass",
+		});
+
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.errors.join("\n")).toContain(
+				"created_at must be an ISO timestamp",
+			);
+		}
+	});
+
 	test("run schema rejects unknown SpecSafe linkage context fields", () => {
 		const result = validateEvalRun({
 			schema_version: "evalfly.run.v1",

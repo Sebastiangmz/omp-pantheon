@@ -3,6 +3,7 @@ import {
 	lstat,
 	mkdir,
 	readFile,
+	readdir,
 	realpath,
 	writeFile,
 } from "node:fs/promises";
@@ -33,7 +34,7 @@ const UNSANITIZED_TRACE_PATTERNS = [
 ] as const;
 
 const USAGE =
-	"Usage: evalfly validate | run --suite smoke | check --suite smoke | report <run-id> | curate-trace <raw-relative-path> <sanitized-name>";
+	"Usage: evalfly validate | run --suite smoke | check --suite smoke | latest | report <run-id> | curate-trace <raw-relative-path> <sanitized-name>";
 
 export type DispatchOptions = {
 	cwd?: string;
@@ -80,6 +81,9 @@ export async function dispatch(
 		}
 		if (command === "check") {
 			return await checkCommand(args.slice(1), cwd, opts);
+		}
+		if (command === "latest") {
+			return await latestCommand(cwd);
 		}
 		if (command === "report") {
 			return await reportCommand(args.slice(1), cwd);
@@ -201,6 +205,79 @@ async function reportCommand(
 		stdout: `evalfly report written: ${join("evals", "reports", `${runId}.md`)}\n`,
 		stderr: "",
 	};
+}
+
+async function latestCommand(cwd: string): Promise<DispatchResult> {
+	const runsDir = await readExactArtifactDir(cwd, ["evals", "runs"]);
+	if (!runsDir) {
+		throw new Error("no evalfly runs found");
+	}
+	const files = (await readdir(runsDir))
+		.filter((file) => file.endsWith(".json"))
+		.sort();
+	if (files.length === 0) {
+		throw new Error("no evalfly runs found");
+	}
+	let latest: EvalRun | undefined;
+	for (const file of files) {
+		const runId = file.slice(0, -".json".length);
+		assertSafeRunId(runId);
+		const runPath = await exactArtifactFilePath(
+			cwd,
+			["evals", "runs"],
+			runId,
+			".json",
+			"run",
+		);
+		const parsed = JSON.parse(await readFile(runPath, "utf8"));
+		const result = validateEvalRun(parsed);
+		if (!result.ok) {
+			throw new Error(
+				`invalid ${join("evals", "runs", file)}:\n${result.errors.join("\n")}`,
+			);
+		}
+		assertSafeRunId(result.value.run_id);
+		if (result.value.run_id !== runId) {
+			throw new Error(
+				`run_id mismatch: requested ${runId} but saved run is ${result.value.run_id}`,
+			);
+		}
+		if (!latest || result.value.created_at > latest.created_at) {
+			latest = result.value;
+		}
+	}
+	if (!latest) {
+		throw new Error("no evalfly runs found");
+	}
+	const reportPath = await canonicalReportPath(cwd, latest.run_id);
+	return {
+		exitCode: 0,
+		stdout: `latest evalfly run: ${latest.run_id}\nverdict: ${latest.verdict}\nsuite: ${latest.suite}\nreport: ${reportPath}\n`,
+		stderr: "",
+	};
+}
+
+async function canonicalReportPath(
+	cwd: string,
+	runId: string,
+): Promise<string> {
+	const relativeReportPath = join("evals", "reports", `${runId}.md`);
+	try {
+		const reportPath = await exactArtifactFilePath(
+			cwd,
+			["evals", "reports"],
+			runId,
+			".md",
+			"report",
+		);
+		await access(reportPath);
+		return relativeReportPath;
+	} catch (error) {
+		if (missingPathError(error)) {
+			throw new Error(`missing report: ${relativeReportPath}`);
+		}
+		throw error;
+	}
 }
 
 async function curateTraceCommand(
@@ -657,6 +734,24 @@ async function ensureExactArtifactDir(
 	return realArtifactDir;
 }
 
+async function readExactArtifactDir(
+	cwd: string,
+	artifactDirParts: readonly string[],
+): Promise<string | undefined> {
+	await assertProjectEvalsDir(cwd);
+	const artifactDir = join(cwd, ...artifactDirParts);
+	try {
+		const realArtifactDir = await realpath(artifactDir);
+		await assertExactArtifactDir(cwd, artifactDirParts, realArtifactDir);
+		return realArtifactDir;
+	} catch (error) {
+		if (missingPathError(error)) {
+			return undefined;
+		}
+		throw error;
+	}
+}
+
 async function assertExactArtifactDir(
 	cwd: string,
 	artifactDirParts: readonly string[],
@@ -746,6 +841,31 @@ async function artifactPath(
 		isAbsolute(relativePath)
 	) {
 		throw new Error(`unsafe run id: ${runId}`);
+	}
+	return targetPath;
+}
+
+async function exactArtifactFilePath(
+	cwd: string,
+	artifactDirParts: [string, string],
+	runId: string,
+	extension: ".json" | ".md",
+	label: "run" | "report",
+): Promise<string> {
+	const targetPath = await artifactPath(
+		cwd,
+		artifactDirParts,
+		runId,
+		extension,
+	);
+	const relativeTargetPath = join(...artifactDirParts, `${runId}${extension}`);
+	const stat = await lstat(targetPath);
+	if (!stat.isFile() || stat.isSymbolicLink()) {
+		throw new Error(`unsafe ${label} artifact: ${relativeTargetPath}`);
+	}
+	const realTargetPath = await realpath(targetPath);
+	if (realTargetPath !== targetPath) {
+		throw new Error(`unsafe ${label} artifact: ${relativeTargetPath}`);
 	}
 	return targetPath;
 }
