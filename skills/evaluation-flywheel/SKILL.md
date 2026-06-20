@@ -57,6 +57,7 @@ bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts summary
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts traces
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts compare <baseline-run-id> <after-run-id>
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts normalize-trace <raw-relative-path> <sanitized-name>
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts import-session-trace <raw-relative-path> <sanitized-name>
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts report <run-id>
 ```
 
@@ -77,6 +78,8 @@ Use `traces` to inventory committed sanitized fixtures. It lists `evals/traces/s
 Use `compare <baseline-run-id> <after-run-id>` when a review needs baseline-to-after regression evidence. It validates saved run records, prints total/passed/failed/critical-regression deltas, and exits nonzero if the after run has any critical regression or worsens failed/critical counts versus baseline.
 
 Use `normalize-trace <raw-relative-path> <sanitized-name>` when a raw JSONL trace under `.pi/evalfly/raw/` should become committed review evidence. It writes `evals/traces/sanitized/<sanitized-name>` with whitelisted metadata (`trace_id`, `slice_id`, agent/model/tool/cost/latency/verdict) and explicit `sanitized_input` / `sanitized_output` fields only. Raw `input`, `output`, and `content` are dropped; this is normalization, not a privacy proof.
+
+Use `import-session-trace <raw-relative-path> <sanitized-name>` when a local session JSON object already separates sanitized message/tool evidence from raw payloads. It imports `messages[]` and `tool_calls[]` into `evalfly.trace.v1`, preserves safe `trace_id`, `session_id`, `slice_id`, agent/model/tool/cost/latency/verdict metadata, and drops raw `input`, `output`, and `content`. It is still a guardrail, not a privacy proof.
 
 If a SpecSafe slice is open in `.pi/.specsafe-state.json`, `evalfly run` and `evalfly check` copy `currentSlice.id` and `currentSlice.sessionId` into the run/report by reference. Pass `--commit-range <range>` when the report should identify the reviewed commit span. Evalfly does not mutate `.pi/.specsafe-state.json`.
 Do not claim runtime enforcement. Evalfly reports evidence; it does not block commits, hooks, CI, or merges unless a project explicitly invokes `check` in its own workflow or deliberately copies the required-gate template and protects that check.
