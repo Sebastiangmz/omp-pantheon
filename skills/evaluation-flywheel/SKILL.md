@@ -52,6 +52,7 @@ bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts validate
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts run --suite smoke --commit-range main..HEAD
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts check --suite smoke --commit-range main..HEAD
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts latest
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts list
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts report <run-id>
 ```
 
@@ -62,6 +63,7 @@ Use `validate` before `run`. Treat `evals/reports/<run-id>.md` as the human-read
 Use `check --suite smoke --commit-range <range>` when you want an explicit local gate command. It runs the same deterministic suite, writes the same evidence, prints the report path, and exits nonzero on a failing verdict. Do not present `check` as ambient enforcement: it only gates a workflow that explicitly calls it.
 
 Use `latest` when a handoff or review needs the newest saved EvalFly evidence path. It validates saved run records before printing the latest run id, verdict, suite, and report path.
+Use `list` when a review needs the saved evidence history rather than only the newest run. It validates saved run records and prints runs newest-first with canonical report paths.
 
 If a SpecSafe slice is open in `.pi/.specsafe-state.json`, `evalfly run` and `evalfly check` copy `currentSlice.id` and `currentSlice.sessionId` into the run/report by reference. Pass `--commit-range <range>` when the report should identify the reviewed commit span. Evalfly does not mutate `.pi/.specsafe-state.json`.
 Do not claim runtime enforcement. Evalfly reports evidence; it does not block commits, hooks, CI, or merges unless a project explicitly invokes `check` in its own workflow.
