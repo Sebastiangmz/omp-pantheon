@@ -71,6 +71,14 @@ Version only sanitized examples under `evals/traces/sanitized/` when they are us
 - Mark cases with `privacy.sanitized: true` only after checking the sanitized artifact.
 - Prefer synthetic fixtures when real traces are not necessary.
 
+
+For local trace curation, keep the raw file under `.pi/evalfly/raw/`, manually minimize/redact it, then copy it into the versionable sanitized tree with:
+
+```bash
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitized-name>
+```
+
+`curate-trace` performs path containment checks and blocks obvious unsanitized content such as bearer tokens, API keys, private keys, emails, private/local URLs, and local absolute paths. It does not capture traces and does not automatically redact; a passing command is a guardrail, not a privacy proof.
 If a case depends on unsanitized private material, keep it local and do not present it as public bundle evidence.
 
 ## SpecSafe linkage by reference

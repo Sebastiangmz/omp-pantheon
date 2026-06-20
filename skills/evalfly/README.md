@@ -32,6 +32,7 @@ Run commands from the project root that contains `evals/config.json`. After inst
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts validate
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts run --suite smoke [--commit-range main..HEAD]
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts report <run-id>
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitized-name>
 ```
 
 When developing this bundle itself, the repo-local path also works:
@@ -40,16 +41,20 @@ When developing this bundle itself, the repo-local path also works:
 bun run skills/evalfly/bin/evalfly.ts validate
 bun run skills/evalfly/bin/evalfly.ts run --suite smoke [--commit-range main..HEAD]
 bun run skills/evalfly/bin/evalfly.ts report <run-id>
+bun run skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitized-name>
 ```
 
 - `validate` checks `evals/config.json` against the current schema.
 - `run --suite smoke` executes deterministic cases in the smoke suite and writes `evals/runs/<run-id>.json` plus `evals/reports/<run-id>.md`.
 - `run --suite smoke --commit-range main..HEAD` adds the commit range to the run context. When `.pi/.specsafe-state.json` has an open `currentSlice`, evalfly also copies `currentSlice.id` and `currentSlice.sessionId` into the run/report by reference without mutating SpecSafe state.
 - `report <run-id>` regenerates the markdown report from a saved run JSON.
+- `curate-trace <raw-relative-path> <sanitized-name>` copies a local trace from ignored `.pi/evalfly/raw/` into `evals/traces/sanitized/` only after deterministic checks for path safety and obvious unsanitized content. It does not capture traces and does not redact automatically.
 
 ## Privacy boundary
 
 Do not version raw traces. Keep raw local material in ignored `.pi/evalfly/raw/`. Commit only sanitized fixtures under `evals/traces/sanitized/`, and mark cases as `privacy.sanitized: true` only after removing secrets, credentials, user identifiers, private URLs, and unnecessary payloads.
+
+Use `curate-trace` only after you have manually minimized the trace to the smallest evidence needed for review. The command blocks obvious leaks, but passing it is not a privacy proof.
 
 ## Current scope
 

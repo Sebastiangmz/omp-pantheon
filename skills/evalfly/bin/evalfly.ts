@@ -21,6 +21,16 @@ import {
 
 const RUN_ID_TOKEN_RE = /^[A-Za-z0-9._-]+$/;
 const CONTEXT_VALUE_MAX_LENGTH = 512;
+const TRACE_NAME_RE = /^[A-Za-z0-9._-]+$/;
+const UNSANITIZED_TRACE_PATTERNS = [
+	/authorization["'\s:]+bearer/i,
+	/api[_-]?key["'\s:=]+[A-Za-z0-9._-]{12,}/i,
+	/-----BEGIN [A-Z ]*PRIVATE KEY-----/,
+	/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/,
+	/\/Users\/[A-Za-z0-9._-]+/,
+	/\/home\/[A-Za-z0-9._-]+/,
+	/https?:\/\/(?:localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)/i,
+] as const;
 
 export type DispatchOptions = {
 	cwd?: string;
@@ -68,10 +78,13 @@ export async function dispatch(
 		if (command === "report") {
 			return await reportCommand(args.slice(1), cwd);
 		}
+		if (command === "curate-trace") {
+			return await curateTraceCommand(args.slice(1), cwd);
+		}
 		return {
 			exitCode: 1,
 			stdout: "",
-			stderr: `unknown command: ${command ?? "(none)"}\nUsage: evalfly validate | run --suite smoke | report <run-id>\n`,
+			stderr: `unknown command: ${command ?? "(none)"}\nUsage: evalfly validate | run --suite smoke | report <run-id> | curate-trace <raw-relative-path> <sanitized-name>\n`,
 		};
 	} catch (error) {
 		return {
@@ -159,6 +172,51 @@ async function reportCommand(
 	return {
 		exitCode: 0,
 		stdout: `evalfly report written: ${join("evals", "reports", `${runId}.md`)}\n`,
+		stderr: "",
+	};
+}
+
+async function curateTraceCommand(
+	args: string[],
+	cwd: string,
+): Promise<DispatchResult> {
+	const [rawPath, sanitizedName] = args;
+	if (!rawPath || !sanitizedName) {
+		return {
+			exitCode: 1,
+			stdout: "",
+			stderr: "curate-trace requires <raw-relative-path> <sanitized-name>\n",
+		};
+	}
+	assertSafeRelativePath("raw trace path", rawPath);
+	assertSafeTraceName(sanitizedName);
+	const rawTracePath = await boundedPath(
+		cwd,
+		[".pi", "evalfly", "raw"],
+		rawPath,
+	);
+	const content = await readFile(rawTracePath, "utf8");
+	assertSanitizedTrace(content);
+	const targetDir = await ensureSanitizedTraceDir(cwd);
+	const targetPath = resolve(targetDir, sanitizedName);
+	if (
+		relative(targetDir, targetPath) === ".." ||
+		relative(targetDir, targetPath).startsWith(`..${sep}`)
+	) {
+		throw new Error(`unsafe sanitized trace name: ${sanitizedName}`);
+	}
+	try {
+		await access(targetPath);
+		throw new Error(`sanitized trace already exists: ${sanitizedName}`);
+	} catch (error) {
+		if (!missingPathError(error)) {
+			throw error;
+		}
+	}
+	await writeFile(targetPath, content, { flag: "wx" });
+	return {
+		exitCode: 0,
+		stdout: `evalfly trace curated: ${join("evals", "traces", "sanitized", sanitizedName)}\n`,
 		stderr: "",
 	};
 }
@@ -455,6 +513,134 @@ function renderReport(run: RunRecord): string {
 function assertSafeRunId(runId: string): void {
 	if (!RUN_ID_TOKEN_RE.test(runId)) {
 		throw new Error(`unsafe run id: ${runId}`);
+	}
+}
+
+function assertSafeRelativePath(label: string, path: string): void {
+	if (isAbsolute(path) || path === "" || path.includes("\0")) {
+		throw new Error(`unsafe ${label}: ${path}`);
+	}
+	const normalized = relative(".", path);
+	if (
+		normalized === ".." ||
+		normalized.startsWith(`..${sep}`) ||
+		isAbsolute(normalized)
+	) {
+		throw new Error(`unsafe ${label}: ${path}`);
+	}
+}
+
+function assertSafeTraceName(name: string): void {
+	if (!TRACE_NAME_RE.test(name) || name === "." || name === "..") {
+		throw new Error(`unsafe sanitized trace name: ${name}`);
+	}
+}
+
+function assertSanitizedTrace(content: string): void {
+	for (const pattern of UNSANITIZED_TRACE_PATTERNS) {
+		if (pattern.test(content)) {
+			throw new Error(
+				"trace appears unsanitized; keep raw traces in .pi/evalfly/raw/",
+			);
+		}
+	}
+}
+
+async function boundedPath(
+	cwd: string,
+	baseParts: [string, string, string],
+	relativePath: string,
+): Promise<string> {
+	const basePath = join(cwd, ...baseParts);
+	const realCwd = await realpath(cwd);
+	const expectedBasePath = resolve(realCwd, ...baseParts);
+	const realBasePath = await realpath(basePath);
+	if (realBasePath !== expectedBasePath) {
+		throw new Error(
+			`unsafe raw trace directory: ${join(...baseParts)} (raw trace directory must be ${join(...baseParts)})`,
+		);
+	}
+	const targetPath = resolve(realBasePath, relativePath);
+	const relativeTarget = relative(realBasePath, targetPath);
+	if (
+		relativeTarget === "" ||
+		relativeTarget === ".." ||
+		relativeTarget.startsWith(`..${sep}`) ||
+		isAbsolute(relativeTarget)
+	) {
+		throw new Error(`unsafe raw trace path: ${relativePath}`);
+	}
+	const realTargetPath = await realpath(targetPath);
+	const realRelativeTarget = relative(realBasePath, realTargetPath);
+	if (
+		realRelativeTarget === "" ||
+		realRelativeTarget === ".." ||
+		realRelativeTarget.startsWith(`..${sep}`) ||
+		isAbsolute(realRelativeTarget)
+	) {
+		throw new Error(`unsafe raw trace path: ${relativePath}`);
+	}
+	return realTargetPath;
+}
+
+async function ensureSanitizedTraceDir(cwd: string): Promise<string> {
+	await assertProjectEvalsDir(cwd);
+	const tracesDir = await ensureExactArtifactDir(cwd, ["evals", "traces"]);
+	const sanitizedDir = join(tracesDir, "sanitized");
+	try {
+		const realSanitizedDir = await realpath(sanitizedDir);
+		await assertExactArtifactDir(
+			cwd,
+			["evals", "traces", "sanitized"],
+			realSanitizedDir,
+		);
+		return realSanitizedDir;
+	} catch (error) {
+		if (!missingPathError(error)) {
+			throw error;
+		}
+	}
+	await mkdir(sanitizedDir);
+	const realSanitizedDir = await realpath(sanitizedDir);
+	await assertExactArtifactDir(
+		cwd,
+		["evals", "traces", "sanitized"],
+		realSanitizedDir,
+	);
+	return realSanitizedDir;
+}
+
+async function ensureExactArtifactDir(
+	cwd: string,
+	artifactDirParts: readonly string[],
+): Promise<string> {
+	const artifactDir = join(cwd, ...artifactDirParts);
+	try {
+		const realArtifactDir = await realpath(artifactDir);
+		await assertExactArtifactDir(cwd, artifactDirParts, realArtifactDir);
+		return realArtifactDir;
+	} catch (error) {
+		if (!missingPathError(error)) {
+			throw error;
+		}
+	}
+	await mkdir(artifactDir);
+	const realArtifactDir = await realpath(artifactDir);
+	await assertExactArtifactDir(cwd, artifactDirParts, realArtifactDir);
+	return realArtifactDir;
+}
+
+async function assertExactArtifactDir(
+	cwd: string,
+	artifactDirParts: readonly string[],
+	realArtifactDir: string,
+): Promise<void> {
+	const realCwd = await realpath(cwd);
+	const expectedArtifactDir = resolve(realCwd, ...artifactDirParts);
+	if (realArtifactDir !== expectedArtifactDir) {
+		throw new Error(
+			`unsafe artifact directory: ${join(...artifactDirParts)} (artifact directory must be ${join(...artifactDirParts)})`,
+		);
 	}
 }
 
