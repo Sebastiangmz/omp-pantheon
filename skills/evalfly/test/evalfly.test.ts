@@ -1,15 +1,15 @@
 import { spawnSync } from "node:child_process";
 import {
 	access,
-	mkdtemp,
 	mkdir,
+	mkdtemp,
 	readFile,
 	rm,
 	symlink,
 	writeFile,
 } from "node:fs/promises";
-import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
 
@@ -616,6 +616,75 @@ describe("evalfly CLI", () => {
 		expect(reportResult.exitCode).toBe(0);
 		expect(report).toContain("Verdict: fail");
 		expect(report).toContain("critical_regressions: 1");
+	});
+
+	test("report refuses to overwrite a symlinked report artifact", async () => {
+		const cwd = await makeProject();
+		await dispatch(["run", "--suite", "smoke"], {
+			cwd,
+			now: () => new Date("2026-06-19T12:00:00.000Z"),
+			runId: "run-report-symlink",
+		});
+		const outsideDir = await mkdtemp(join(tmpdir(), "evalfly-report-outside-"));
+		const outsideTarget = join(outsideDir, "target.md");
+		await writeFile(outsideTarget, "do not overwrite\n");
+		await rm(join(cwd, "evals", "reports", "run-report-symlink.md"));
+		await symlink(
+			outsideTarget,
+			join(cwd, "evals", "reports", "run-report-symlink.md"),
+		);
+
+		const result = await dispatch(["report", "run-report-symlink"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("unsafe report artifact");
+		expect(await readFile(outsideTarget, "utf8")).toBe("do not overwrite\n");
+	});
+
+	test("report refuses to read a symlinked run artifact", async () => {
+		const cwd = await makeProject();
+		await dispatch(["run", "--suite", "smoke"], {
+			cwd,
+			now: () => new Date("2026-06-19T12:00:00.000Z"),
+			runId: "run-read-symlink",
+		});
+		const outsideDir = await mkdtemp(
+			join(tmpdir(), "evalfly-read-run-outside-"),
+		);
+		const outsideTarget = join(outsideDir, "run.json");
+		await writeFile(outsideTarget, "{}\n");
+		await rm(join(cwd, "evals", "runs", "run-read-symlink.json"));
+		await symlink(
+			outsideTarget,
+			join(cwd, "evals", "runs", "run-read-symlink.json"),
+		);
+
+		const result = await dispatch(["report", "run-read-symlink"], { cwd });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("unsafe run artifact");
+	});
+
+	test("run refuses pre-existing symlinked run artifact", async () => {
+		const cwd = await makeProject();
+		const outsideDir = await mkdtemp(join(tmpdir(), "evalfly-run-outside-"));
+		const outsideTarget = join(outsideDir, "run.json");
+		await writeFile(outsideTarget, "{}\n");
+		await mkdir(join(cwd, "evals", "runs"), { recursive: true });
+		await symlink(
+			outsideTarget,
+			join(cwd, "evals", "runs", "run-symlink.json"),
+		);
+
+		const result = await dispatch(["run", "--suite", "smoke"], {
+			cwd,
+			now: () => new Date("2026-06-19T12:00:00.000Z"),
+			runId: "run-symlink",
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("run artifact already exists");
+		expect(await readFile(outsideTarget, "utf8")).toBe("{}\n");
 	});
 
 	test("run records llm judge cases as unsupported without calling an llm", async () => {
@@ -1452,7 +1521,7 @@ describe("evalfly CLI", () => {
 				events: [
 					{
 						role: "assistant",
-						content: "Use the report path evals/reports/run-smoke.md",
+						sanitized_output: "Use the report path evals/reports/run-smoke.md",
 					},
 				],
 			},
@@ -1476,6 +1545,47 @@ describe("evalfly CLI", () => {
 				"utf8",
 			),
 		).toBe(trace);
+	});
+
+	test("curate-trace rejects raw JSON fields before writing", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });
+		await writeFile(
+			join(cwd, ".pi", "evalfly", "raw", "raw-field.json"),
+			JSON.stringify({
+				events: [{ content: "raw prompt", sanitized_output: "safe summary" }],
+			}),
+		);
+
+		const result = await dispatch(
+			["curate-trace", "raw-field.json", "raw-field.json"],
+			{ cwd },
+		);
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("trace contains raw fields");
+		await expect(
+			readFile(join(cwd, "evals", "traces", "sanitized", "raw-field.json")),
+		).rejects.toThrow();
+	});
+
+	test("curate-trace rejects non-json trace content before writing", async () => {
+		const cwd = await makeProject();
+		await mkdir(join(cwd, ".pi", "evalfly", "raw"), { recursive: true });
+		await writeFile(
+			join(cwd, ".pi", "evalfly", "raw", "plain.txt"),
+			"assistant: raw transcript\n",
+		);
+
+		const result = await dispatch(["curate-trace", "plain.txt", "plain.json"], {
+			cwd,
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain("trace must be valid JSON");
+		await expect(
+			readFile(join(cwd, "evals", "traces", "sanitized", "plain.json")),
+		).rejects.toThrow();
 	});
 
 	test("curate-trace rejects traces with obvious secrets before writing", async () => {
