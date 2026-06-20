@@ -26,6 +26,16 @@ The optional GitHub Actions example lives at `skills/evalfly/templates/github-ac
 
 `evals/config.json` is the file read by the evalfly CLI. Keep any standalone files in `evals/cases/` synchronized with the cases embedded in `config.json` until a later loader supports case discovery.
 
+## Adoption checklist
+
+For a project that wants EvalFly evidence:
+
+1. Copy `skills/evalfly/templates/evals/` to the project root as `evals/`.
+2. Edit `evals/config.json` so the smoke suite covers the smallest deterministic regression that matters.
+3. Keep raw private traces under ignored `.pi/evalfly/raw/`; commit only minimized sanitized fixtures under `evals/traces/sanitized/`.
+4. Run `validate`, then `check --suite smoke --commit-range <base>..<head>` before citing EvalFly evidence in a PR or handoff.
+5. Cite `summary`, `latest`, or `list` output with the markdown report path. Do not claim EvalFly blocks merges unless the project explicitly wires `check` into its own workflow.
+
 ## Commands
 
 Run commands from the project root that contains `evals/config.json`. After installing `omp-pantheon`, use the installed skill path from any project:
@@ -36,6 +46,8 @@ bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts run --suite smoke [--commit-r
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts check --suite smoke [--commit-range main..HEAD]
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts latest
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts list
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts summary
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts traces
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts report <run-id>
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitized-name>
 ```
@@ -49,6 +61,8 @@ bun run skills/evalfly/bin/evalfly.ts check --suite smoke [--commit-range main..
 bun run skills/evalfly/bin/evalfly.ts latest
 bun run skills/evalfly/bin/evalfly.ts list
 bun run skills/evalfly/bin/evalfly.ts report <run-id>
+bun run skills/evalfly/bin/evalfly.ts summary
+bun run skills/evalfly/bin/evalfly.ts traces
 bun run skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitized-name>
 ```
 
@@ -58,10 +72,14 @@ bun run skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitize
 - `check --suite smoke` is the explicit local gate command: it validates config, runs the smoke suite, writes the same run/report evidence, prints the report path, and exits nonzero on a failing verdict. It is not wired into hooks, CI, or merges unless a project chooses to call it.
 - `latest` reads `evals/runs/*.json`, validates saved run records, and prints the newest run id, verdict, suite, and report path for handoff or review.
 - `list` reads `evals/runs/*.json`, validates saved run records, and prints all runs newest-first with canonical report paths for review triage.
+- `summary` reads saved runs, validates them, and prints aggregate run counts, critical regressions, latest context, and the latest canonical report path.
+- `traces` indexes committed sanitized fixtures under `evals/traces/sanitized/` without reading raw traces or file contents.
 - `report <run-id>` regenerates the markdown report from a saved run JSON.
 - `curate-trace <raw-relative-path> <sanitized-name>` copies a local trace from ignored `.pi/evalfly/raw/` into `evals/traces/sanitized/` only after deterministic checks for path safety and obvious unsanitized content. It does not capture traces and does not redact automatically.
 
 ## Experimental judge metadata
+
+`judge.type: "human"` is schema-valid only with a non-empty `rubric` and optional `reviewer`. Keep detailed rubric notes in `evals/rubrics/`, name the evidence a reviewer must inspect, and archive the decision in the PR or handoff; Evalfly records human-judge cases as unsupported at runtime and does not execute human judgment.
 
 `judge.type: "llm"` is schema-valid only with a non-empty `rubric` and optional `model`. Evalfly records LLM-judge cases as unsupported at runtime; it does not call models, require LLM judges, or treat them as enforcement.
 

@@ -53,6 +53,8 @@ bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts run --suite smoke --commit-ra
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts check --suite smoke --commit-range main..HEAD
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts latest
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts list
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts summary
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts traces
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts report <run-id>
 ```
 
@@ -63,7 +65,12 @@ Use `validate` before `run`. Treat `evals/reports/<run-id>.md` as the human-read
 Use `check --suite smoke --commit-range <range>` when you want an explicit local gate command. It runs the same deterministic suite, writes the same evidence, prints the report path, and exits nonzero on a failing verdict. Do not present `check` as ambient enforcement: it only gates a workflow that explicitly calls it.
 
 Use `latest` when a handoff or review needs the newest saved EvalFly evidence path. It validates saved run records before printing the latest run id, verdict, suite, and report path.
+
 Use `list` when a review needs the saved evidence history rather than only the newest run. It validates saved run records and prints runs newest-first with canonical report paths.
+
+Use `summary` when a reviewer needs a compact status packet: total runs, passing/failing runs, critical regressions, latest verdict, latest report path, and latest SpecSafe/commit-range context.
+
+Use `traces` to inventory committed sanitized fixtures. It lists `evals/traces/sanitized/` paths and sizes only; it does not inspect `.pi/evalfly/raw/` and does not prove privacy.
 
 If a SpecSafe slice is open in `.pi/.specsafe-state.json`, `evalfly run` and `evalfly check` copy `currentSlice.id` and `currentSlice.sessionId` into the run/report by reference. Pass `--commit-range <range>` when the report should identify the reviewed commit span. Evalfly does not mutate `.pi/.specsafe-state.json`.
 Do not claim runtime enforcement. Evalfly reports evidence; it does not block commits, hooks, CI, or merges unless a project explicitly invokes `check` in its own workflow.
@@ -89,6 +96,8 @@ bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-pa
 `curate-trace` performs path containment checks and blocks obvious unsanitized content such as bearer tokens, API keys, private keys, emails, private/local URLs, and local absolute paths. It does not capture traces and does not automatically redact; a passing command is a guardrail, not a privacy proof.
 If a case depends on unsanitized private material, keep it local and do not present it as public bundle evidence.
 
+Use `traces` before review when trace fixtures are part of the evidence packet. The command is an index, not a sanitizer: it confirms which sanitized files are present and refuses symlinked/non-regular entries, but it does not inspect content.
+
 ## SpecSafe linkage by reference
 
 Link eval evidence from SpecSafe by reference, not by embedding reports into the state file. Use stable paths and run ids, for example:
@@ -98,9 +107,11 @@ Link eval evidence from SpecSafe by reference, not by embedding reports into the
 
 Keep SpecSafe state focused on slice lifecycle. Do not add eval payloads, raw traces, or external memory dependencies to `.pi/.specsafe-state.json`.
 
-## Experimental LLM judge metadata
+## Experimental human and LLM judge metadata
 
 LLM judge cases may be described with `judge: { "type": "llm", "rubric": "...", "model": "optional" }` for future/advisory review design. Evalfly validates that metadata but does not execute LLM judges; `evalfly run` records them as unsupported. Prefer deterministic assertions whenever possible.
+
+Human judge cases may be described with `judge: { "type": "human", "rubric": "...", "reviewer": "optional" }` when the decision cannot be made deterministic. Put the detailed rubric in `evals/rubrics/`, state required evidence, exact pass/fail conditions, and privacy classification, then cite the human decision in the PR or handoff. Do not use `human` as a placeholder for unimplemented deterministic coverage.
 
 ## Optional advisory hook
 
