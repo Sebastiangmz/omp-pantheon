@@ -48,6 +48,7 @@ bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts latest
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts list
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts summary
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts traces
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts audit-traces
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts compare <baseline-run-id> <after-run-id>
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts report <run-id>
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitized-name>
@@ -66,6 +67,7 @@ bun run skills/evalfly/bin/evalfly.ts list
 bun run skills/evalfly/bin/evalfly.ts report <run-id>
 bun run skills/evalfly/bin/evalfly.ts summary
 bun run skills/evalfly/bin/evalfly.ts traces
+bun run skills/evalfly/bin/evalfly.ts audit-traces
 bun run skills/evalfly/bin/evalfly.ts compare <baseline-run-id> <after-run-id>
 bun run skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitized-name>
 bun run skills/evalfly/bin/evalfly.ts normalize-trace <raw-relative-path> <sanitized-name>
@@ -80,6 +82,7 @@ bun run skills/evalfly/bin/evalfly.ts import-session-trace <raw-relative-path> <
 - `list` reads `evals/runs/*.json`, validates saved run records, and prints all runs newest-first with canonical report paths for review triage.
 - `summary` reads saved runs, validates them, and prints aggregate run counts, critical regressions, latest context, and the latest canonical report path.
 - `traces` indexes committed sanitized fixtures under `evals/traces/sanitized/` without reading raw traces or file contents.
+- `audit-traces` reads committed sanitized trace JSON under `evals/traces/sanitized/`, fails on privacy issues such as raw `input`, `output`, or `content` fields and obvious secret patterns, and reports non-blocking curation candidates for high cost (`total_cost_usd >= 0.05`), high latency (`total_latency_ms >= 60000`), or missing sanitized event evidence.
 - `compare <baseline-run-id> <after-run-id>` validates saved run records and prints baseline-to-after deltas for total, passed, failed, and critical regressions. It exits nonzero if the after run has any critical regression or worsens failed/critical counts versus baseline.
 - `report <run-id>` regenerates the markdown report from a saved run JSON.
 - `curate-trace <raw-relative-path> <sanitized-name>` copies a local trace from ignored `.pi/evalfly/raw/` into `evals/traces/sanitized/` only after deterministic checks for path safety and obvious unsanitized content. It does not capture traces and does not redact automatically.
@@ -97,6 +100,10 @@ bun run skills/evalfly/bin/evalfly.ts import-session-trace <raw-relative-path> <
 Do not version raw traces. Keep raw local material in ignored `.pi/evalfly/raw/`. Commit only sanitized fixtures under `evals/traces/sanitized/`, and mark cases as `privacy.sanitized: true` only after removing secrets, credentials, user identifiers, private URLs, and unnecessary payloads.
 
 Use `curate-trace` only after you have manually minimized the trace to the smallest evidence needed for review. The command blocks obvious leaks, but passing it is not a privacy proof.
+
+Before review or release, run `audit-traces` when sanitized trace fixtures changed. Treat any privacy issue as blocking. Treat high-cost/high-latency/missing-evidence candidates as a curation queue: minimize the fixture, split it into a smaller case, or explain why that trace is intentionally retained.
+
+Retention policy: raw files under `.pi/evalfly/raw/` are local scratch only and should be deleted after a sanitized artifact or report is committed. Keep committed sanitized traces only while they protect a live eval, reproduce a current regression, or document an active reviewer decision; prune stale traces when their eval case is removed or superseded.
 
 ## Current scope
 

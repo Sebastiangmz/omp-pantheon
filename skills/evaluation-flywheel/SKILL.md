@@ -55,6 +55,7 @@ bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts latest
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts list
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts summary
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts traces
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts audit-traces
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts compare <baseline-run-id> <after-run-id>
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts normalize-trace <raw-relative-path> <sanitized-name>
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts import-session-trace <raw-relative-path> <sanitized-name>
@@ -74,6 +75,8 @@ Use `list` when a review needs the saved evidence history rather than only the n
 Use `summary` when a reviewer needs a compact status packet: total runs, passing/failing runs, critical regressions, latest verdict, latest report path, and latest SpecSafe/commit-range context.
 
 Use `traces` to inventory committed sanitized fixtures. It lists `evals/traces/sanitized/` paths and sizes only; it does not inspect `.pi/evalfly/raw/` and does not prove privacy.
+
+Use `audit-traces` before citing or reviewing changed trace fixtures. It reads committed sanitized trace JSON, exits nonzero on privacy issues such as raw `input`, `output`, or `content` fields and obvious secret patterns, and reports curation candidates for high cost (`total_cost_usd >= 0.05`), high latency (`total_latency_ms >= 60000`), or events missing sanitized evidence.
 
 Use `compare <baseline-run-id> <after-run-id>` when a review needs baseline-to-after regression evidence. It validates saved run records, prints total/passed/failed/critical-regression deltas, and exits nonzero if the after run has any critical regression or worsens failed/critical counts versus baseline.
 
@@ -106,6 +109,8 @@ bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-pa
 If a case depends on unsanitized private material, keep it local and do not present it as public bundle evidence.
 
 Use `traces` before review when trace fixtures are part of the evidence packet. The command is an index, not a sanitizer: it confirms which sanitized files are present and refuses symlinked/non-regular entries, but it does not inspect content.
+
+Retention policy: raw `.pi/evalfly/raw/` files are temporary local scratch and should be deleted once a sanitized artifact or report is produced. Keep committed sanitized traces only while they protect an active eval case, reproduce a current regression, or document an active reviewer decision; remove stale traces when the case/report they support is removed or superseded.
 
 ## SpecSafe linkage by reference
 
