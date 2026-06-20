@@ -99,12 +99,14 @@ The bundled `evalfly-advisor` extension hook is inactive by default. A project o
 
 This hook never runs evals, never captures traces, never blocks completion, and never turns EvalFly into CI or merge enforcement.
 
+The bundled GitHub Actions example at `skills/evalfly/templates/github-actions/evalfly-check.yml` is also opt-in. It is manual and `continue-on-error` by default, so copying it produces advisory evidence rather than a required CI gate.
+
 ## Current limits
 
 The contract MVP intentionally provides evidence tooling only:
 
 - No global hook enforcement. The optional `evalfly-advisor` hook is reminder-only and opt-in.
-- No CI gate.
+- No mandatory CI gate. The optional GitHub Actions example is advisory unless a project deliberately makes it required.
 - No required LLM-as-judge.
 - No automatic raw trace capture.
 - No mutation of existing project state during bootstrap.

@@ -2,9 +2,9 @@
 
 `evalfly` is the opt-in CLI for the Evaluation Flywheel contract MVP. It validates a project-local `evals/config.json`, runs deterministic suites, and writes run/report evidence under `evals/runs/` and `evals/reports/`.
 
-## Template
+## Templates
 
-Copy the template into a project that needs evaluation evidence:
+Copy the evals template into a project that needs evaluation evidence:
 
 ```bash
 cp -R skills/evalfly/templates/evals ./evals
@@ -21,6 +21,8 @@ evals/
   reports/.gitkeep
   traces/sanitized/.gitkeep
 ```
+
+The optional GitHub Actions example lives at `skills/evalfly/templates/github-actions/evalfly-check.yml`. It is deliberately manual (`workflow_dispatch`) and `continue-on-error: true`; copy it only into a repository that vendors `skills/evalfly/` and wants advisory CI evidence.
 
 `evals/config.json` is the file read by the evalfly CLI. Keep any standalone files in `evals/cases/` synchronized with the cases embedded in `config.json` until a later loader supports case discovery.
 
