@@ -34,7 +34,7 @@ For a project that wants EvalFly evidence:
 2. Edit `evals/config.json` so the smoke suite covers the smallest deterministic regression that matters.
 3. Keep raw private traces under ignored `.pi/evalfly/raw/`; commit only minimized sanitized fixtures under `evals/traces/sanitized/`.
 4. Run `validate`, then `check --suite smoke --commit-range <base>..<head>` before citing EvalFly evidence in a PR or handoff.
-5. Cite `summary`, `latest`, or `list` output with the markdown report path. Do not claim EvalFly blocks merges unless the project explicitly wires `check` into its own workflow.
+5. Cite `summary`, `latest`, `list`, or `compare` output with the markdown report path. Use `compare <baseline-run-id> <after-run-id>` when a review needs baseline-to-after regression evidence. Do not claim EvalFly blocks merges unless the project explicitly wires `check` into its own workflow.
 
 ## Commands
 
@@ -48,6 +48,7 @@ bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts latest
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts list
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts summary
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts traces
+bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts compare <baseline-run-id> <after-run-id>
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts report <run-id>
 bun run ~/.omp/agent/skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitized-name>
 ```
@@ -63,6 +64,7 @@ bun run skills/evalfly/bin/evalfly.ts list
 bun run skills/evalfly/bin/evalfly.ts report <run-id>
 bun run skills/evalfly/bin/evalfly.ts summary
 bun run skills/evalfly/bin/evalfly.ts traces
+bun run skills/evalfly/bin/evalfly.ts compare <baseline-run-id> <after-run-id>
 bun run skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitized-name>
 ```
 
@@ -74,6 +76,7 @@ bun run skills/evalfly/bin/evalfly.ts curate-trace <raw-relative-path> <sanitize
 - `list` reads `evals/runs/*.json`, validates saved run records, and prints all runs newest-first with canonical report paths for review triage.
 - `summary` reads saved runs, validates them, and prints aggregate run counts, critical regressions, latest context, and the latest canonical report path.
 - `traces` indexes committed sanitized fixtures under `evals/traces/sanitized/` without reading raw traces or file contents.
+- `compare <baseline-run-id> <after-run-id>` validates saved run records and prints baseline-to-after deltas for total, passed, failed, and critical regressions. It exits nonzero if the after run has any critical regression or worsens failed/critical counts versus baseline.
 - `report <run-id>` regenerates the markdown report from a saved run JSON.
 - `curate-trace <raw-relative-path> <sanitized-name>` copies a local trace from ignored `.pi/evalfly/raw/` into `evals/traces/sanitized/` only after deterministic checks for path safety and obvious unsanitized content. It does not capture traces and does not redact automatically.
 
