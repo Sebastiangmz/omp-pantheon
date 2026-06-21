@@ -99,12 +99,14 @@ Implementation plan:
 
 ## Current honest status
 
-Current EvalFly is now a strong opt-in evidence stack with local enforcement. It is still not mandatory globally: a project must explicitly activate local enforcement, and CI branch protection remains a separate repository setting.
+Current EvalFly is a strong opt-in evidence stack with local enforcement. It is
+still not mandatory globally: a project must explicitly activate local
+enforcement, and CI branch protection remains a separate repository setting.
 
 Implemented:
 
 - methodology skill;
-- agent contracts;
+- EvalFly-aware agent contracts;
 - deterministic EvalFly runner;
 - vendorable local project eval template;
 - this repository's own `evals/` smoke suite for critical EvalFly harness files;
@@ -115,14 +117,30 @@ Implemented:
 - optional advisor hook;
 - explicit local enforced-mode state in `.pi/evalfly/enforcement.json`;
 - `evalfly enforce status/start/stop/explain`;
-- enforced-mode lifecycle/tool/agent trace buffering, active only while enforcement is enabled;
-- pre-completion session gate that blocks stop when required passing evidence is missing;
+- enforced-mode lifecycle/tool/agent trace buffering, active only while
+  enforcement is enabled;
+- pre-completion session gate that blocks stop when required passing evidence is
+  missing;
 - optional GitHub Actions templates;
 - privacy and retention docs.
 
+Adjacent harness capability:
+
+- `agentic-branch-e2e` can verify a feature branch as a real user, freeze
+  criteria before testing, collect UI/network/log/backend evidence, drive
+  negative cases, and report PASS/FAIL/INCONCLUSIVE verdicts. It complements
+  EvalFly but is not yet automatically imported as EvalFly run evidence.
+
 Still missing for the full original closed-loop target:
 
+- installed required CI and branch protection/ruleset in real target projects;
+- richer runner assertions beyond deterministic `file_exists`;
+- automatic persistent OMP trace capture with sanitization;
+- automatic branch-E2E run-record import into EvalFly evidence;
 - automatic trace-to-eval candidate workflow;
 - run-level cost/latency/model comparison beyond stored summary metadata;
 - actual LLM/human judge execution;
-- installed required CI and branch protection automation.
+- hidden/dev eval split management;
+- eval debt prune/dedupe tooling;
+- stronger SpecSafe linkage from slice to eval run, trace, report, and commit or
+  PR metadata.

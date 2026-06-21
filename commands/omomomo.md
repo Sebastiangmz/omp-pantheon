@@ -9,15 +9,16 @@ Print the following message to the user EXACTLY as written (in a friendly, celeb
 
 ---
 
-# 🎉 oMp-Pantheon: OMP + Pantheon + Seshat + SpecSafe
+# 🎉 oMp-Pantheon: OMP + Pantheon + Seshat + Honcho + EvalFly
 
 **You found the integrated harness easter egg.** 🥚✨
 
 ## What is omp-pantheon now?
 
 **omp-pantheon** is Sebastián's source-of-truth OMP bundle. It keeps the
-oh-my-openagent-inspired Pantheon layer, then folds in the local Seshat stack so
-`omp` boots as a full agentic engineering cockpit:
+oh-my-openagent-inspired Pantheon layer, folds in the Seshat/SpecSafe stack, and
+adds Honcho memory plus EvalFly evidence/enforcement so `omp` boots as a local
+agentic engineering cockpit:
 
 - **Upstream OMP runtime**: providers, built-in tools, LSP/DAP, `explore`,
   `plan`, `task`, `reviewer`, `designer`, `librarian`, and the native harness
@@ -31,13 +32,23 @@ oh-my-openagent-inspired Pantheon layer, then folds in the local Seshat stack so
 - **SpecSafe discipline**: `bootstrap`, `coherence`, `docs`, `env-doctor`,
   `github`, `latest-docs`, `linear`, `push`, and `specsafe` skills, plus
   slice/session hooks.
+- **Honcho memory**: durable recall/search/conclusion tools wired into the OMP
+  extension layer when configured.
 - **Loop runtime and guardrails**: Ralph/ULW continuation commands, todo
   enforcement, intent gate, comment checker, `i-approve`, fallback audit, and
   SpecSafe subagent/session hooks.
-- **Opt-in evaluation flywheel**: `evaluation-flywheel` guidance plus the
-  `evalfly` template/CLI for deterministic smoke evidence, sanitized report
-  artifacts, and explicit local enforcement when `evalfly enforce start` is used;
-  CI enforcement remains opt-in template/configuration only.
+- **EvalFly evidence and enforcement**: `evaluation-flywheel` guidance plus the
+  `evalfly` template/CLI for deterministic smoke evidence, run/report artifacts,
+  sanitized trace import/normalization/audit, compare/summary/report commands,
+  and explicit local enforcement when `evalfly enforce start` is used.
+- **Branch E2E protocol**: `agentic-branch-e2e` for real-user branch validation
+  with frozen criteria, UI/network/log/backend evidence, negative cases, and
+  PASS/FAIL/INCONCLUSIVE verdicts.
+
+Current boundary: CI enforcement, branch protection, semantic agentic evals,
+automatic persistent trace capture, LLM/human judge execution, trace-to-eval
+promotion, and eval debt maintenance are roadmap items, not default global
+behavior.
 
 ## Commands in the bundle
 
